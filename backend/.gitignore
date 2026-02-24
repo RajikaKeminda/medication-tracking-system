@@ -2,3 +2,5 @@
 /node_modules
 /logs/*.log
 /dist
+*._error.txt
+tsc_output.txt
