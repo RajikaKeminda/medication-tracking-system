@@ -10,7 +10,12 @@
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts"
   },
-  "keywords": ["pharmacy", "medication", "tracker", "api"],
+  "keywords": [
+    "pharmacy",
+    "medication",
+    "tracker",
+    "api"
+  ],
   "license": "ISC",
   "dependencies": {
     "bcrypt": "^5.1.1",
