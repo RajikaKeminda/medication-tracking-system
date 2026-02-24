@@ -8,6 +8,7 @@ export enum UserRole {
 }
 
 export interface IUser extends Document {
+  private _id(_id: any): unknown;
   name: string;
   email: string;
   password: string;
@@ -90,7 +91,7 @@ const userSchema = new Schema<IUser>(
   {
     timestamps: true,
     toJSON: {
-      transform(_doc, ret: Record<string, unknown>) {
+      transform(_doc: any, ret: Record<string, unknown>) {
         delete ret.password;
         delete ret.__v;
         return ret;
@@ -101,7 +102,7 @@ const userSchema = new Schema<IUser>(
 
 userSchema.index({ role: 1 });
 
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function (next: () => void) {
   if (!this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 10);
   next();
