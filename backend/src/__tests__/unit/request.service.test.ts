@@ -11,6 +11,7 @@ import {
   createTestRequest,
   testIds 
 } from '../helpers/test-data.helper';
+import { CreateRequestInput, ListRequestsQuery } from '@validators/request.validator';
 
 describe('RequestService', () => {
   beforeAll(async () => {
@@ -65,7 +66,7 @@ describe('RequestService', () => {
       };
 
       // Act
-      const result = await RequestService.createRequest(createData, patient._id.toString());
+      const result = await RequestService.createRequest(createData as CreateRequestInput, patient._id.toString());
 
       // Assert
       expect(result.urgencyLevel).toBe(UrgencyLevel.NORMAL);
@@ -85,7 +86,7 @@ describe('RequestService', () => {
       };
 
       // Act
-      const result = await RequestService.createRequest(createData, patient._id.toString());
+      const result = await RequestService.createRequest(createData as CreateRequestInput, patient._id.toString());
 
       // Assert
       expect(result.estimatedAvailability).toBeInstanceOf(Date);
@@ -115,7 +116,7 @@ describe('RequestService', () => {
       const query = { page: 1, limit: 10, sortBy: 'createdAt', sortOrder: 'desc' };
 
       // Act
-      const result = await RequestService.getRequests(query);
+      const result = await RequestService.getRequests(query as ListRequestsQuery);
 
       // Assert
       expect(result.requests).toHaveLength(3);
@@ -126,7 +127,7 @@ describe('RequestService', () => {
 
     it('should filter requests by status', async () => {
       // Arrange
-      const query = { 
+      const query: ListRequestsQuery = { 
         page: 1, 
         limit: 10, 
         sortBy: 'createdAt', 
@@ -153,7 +154,7 @@ describe('RequestService', () => {
       };
 
       // Act
-      const result = await RequestService.getRequests(query);
+      const result = await RequestService.getRequests(query as ListRequestsQuery);
 
       // Assert
       expect(result.requests).toHaveLength(1);
@@ -176,7 +177,7 @@ describe('RequestService', () => {
       };
 
       // Act
-      const result = await RequestService.getRequests(query);
+      const result = await RequestService.getRequests(query as ListRequestsQuery);
 
       // Assert
       expect(result.requests.length).toBeGreaterThan(0);
@@ -192,7 +193,7 @@ describe('RequestService', () => {
       const query = { page: 1, limit: 2, sortBy: 'createdAt', sortOrder: 'desc' };
 
       // Act
-      const result = await RequestService.getRequests(query);
+      const result = await RequestService.getRequests(query as ListRequestsQuery);
 
       // Assert
       expect(result.requests).toHaveLength(2);
@@ -252,7 +253,7 @@ describe('RequestService', () => {
       const query = { page: 1, limit: 10, sortBy: 'createdAt', sortOrder: 'desc' };
 
       // Act
-      const result = await RequestService.getRequestsByUser(user!._id.toString(), query);
+      const result = await RequestService.getRequestsByUser(user!._id.toString(), query as ListRequestsQuery);
 
       // Assert
       expect(result.requests).toHaveLength(2);
@@ -268,7 +269,7 @@ describe('RequestService', () => {
       const query = { page: 1, limit: 10, sortBy: 'createdAt', sortOrder: 'desc' };
 
       // Act
-      const result = await RequestService.getRequestsByUser(user!._id.toString(), query);
+      const result = await RequestService.getRequestsByUser(user!._id.toString(), query as ListRequestsQuery);
 
       // Assert
       expect(result.requests).toHaveLength(0);
@@ -297,7 +298,7 @@ describe('RequestService', () => {
       const query = { page: 1, limit: 10, sortBy: 'createdAt', sortOrder: 'desc' };
 
       // Act
-      const result = await RequestService.getRequestsByPharmacy(testIds.pharmacyId.toString(), query);
+      const result = await RequestService.getRequestsByPharmacy(testIds.pharmacyId.toString(), query as ListRequestsQuery);
 
       // Assert
       expect(result.requests).toHaveLength(2);
@@ -327,7 +328,7 @@ describe('RequestService', () => {
       const query = { page: 1, limit: 10, sortBy: 'createdAt', sortOrder: 'desc' };
 
       // Act
-      const result = await RequestService.getUrgentRequests(query);
+      const result = await RequestService.getUrgentRequests(query as ListRequestsQuery);
 
       // Assert
       expect(result.requests).toHaveLength(2);

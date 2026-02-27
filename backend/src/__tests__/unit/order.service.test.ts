@@ -3,6 +3,7 @@ import { OrderService } from '../../services/order.service';
 import { Order, OrderStatus, PaymentStatus, PaymentMethod } from '../../models/order.model';
 import { MedicationRequest, RequestStatus } from '../../models/request.model';
 import { Inventory } from '../../models/inventory.model';
+import '../../models/pharmacy.model'; // Register Pharmacy schema for populate()
 import { StripeService } from '../../services/stripe.service';
 import { ApiError } from '../../utils/api-error';
 import { connectTestDB, disconnectTestDB, clearTestDB } from '../helpers/db.helper';

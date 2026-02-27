@@ -15,6 +15,7 @@ import {
   testIds 
 } from '../helpers/test-data.helper';
 import { RequestStatus, UrgencyLevel } from '../../models/request.model';
+import mongoose from 'mongoose';
 
 describe('Request API Integration Tests', () => {
   let app: express.Application;

@@ -4,6 +4,7 @@
 
 - [Overview](#overview)
 - [Tech Stack](#tech-stack)
+- [Setup Instructions](#setup-instructions)
 - [API Endpoint Documentation](#api-endpoint-documentation)
   - [Authentication](#authentication)
   - [Standard Response Format](#standard-response-format)
@@ -54,6 +55,12 @@
   - [Running Unit Tests](#running-unit-tests)
   - [Integration Testing Setup and Execution](#integration-testing-setup-and-execution)
   - [Performance Testing Setup and Execution](#performance-testing-setup-and-execution)
+- [Deployment Report](#deployment-report)
+  - [Backend Deployment (Render)](#backend-deployment-platform-render)
+  - [Frontend Deployment](#frontend-deployment-platform)
+  - [Environment Variables](#environment-variables-used-without-secrets)
+  - [Live URLs](#live-urls)
+  - [Screenshots](#screenshots-or-evidence-of-successful-deployment)
 
 ---
 
@@ -76,7 +83,84 @@ The Order Processing module (`/api/orders`) manages the full lifecycle of medica
 
 ---
 
+## Setup Instructions
+
+Step-by-step guide to get the project running locally.
+
+### Prerequisites
+
+- **Node.js** >= 18.x
+- **npm** >= 9.x
+- **MongoDB** (local instance or MongoDB Atlas connection string)
+
+### Step 1: Clone the Repository
+
+```bash
+git clone <repository-url>
+cd medication-tracking-system
+```
+
+### Step 2: Backend Setup
+
+1. Navigate to the backend directory:
+
+```bash
+cd backend
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Create environment configuration:
+
+```bash
+cp .env.example .env
+```
+
+4. Edit `.env` and configure the following (replace placeholders with your values):
+
+| Variable | Description | Example |
+| -------- | ----------- | ------- |
+| `MONGODB_URI` | MongoDB connection string | `mongodb://localhost:27017/medication-tracker` or MongoDB Atlas URI |
+| `JWT_ACCESS_SECRET` | Secret for JWT access tokens | A strong, random string |
+| `JWT_REFRESH_SECRET` | Secret for JWT refresh tokens | A strong, random string |
+| `PORT` | Server port (optional, default: 5000) | `5000` |
+| `CORS_ORIGIN` | Allowed frontend origin | `http://localhost:3000` |
+
+5. Build the project:
+
+```bash
+npm run build
+```
+
+6. Start the server:
+
+```bash
+# Development mode (with hot reload)
+npm run dev
+
+# Production mode
+npm start
+```
+
+### Step 3: Verify Backend
+
+- API is available at `http://localhost:5000/api`
+- Swagger API documentation: `http://localhost:5000/api-docs/`
+- Health check: `GET http://localhost:5000/api/health` (if applicable)
+
+### Step 4: Frontend Setup (if applicable)
+
+> **Placeholder:** Add frontend setup instructions here when the frontend application is available. Include steps for installing dependencies, configuring environment variables, and running the development server.
+
+---
+
 ## API Endpoint Documentation
+
+Complete documentation of all API endpoints, including HTTP methods, request/response formats, authentication requirements, and example requests and responses.
 
 ### Authentication
 
@@ -2755,3 +2839,83 @@ Artillery outputs a detailed report at the end of the run including:
 - **Status codes** — Breakdown of HTTP response codes (expect all 200)
 - **RPS** — Requests per second throughput
 - **Errors** — Any connection or timeout errors
+
+---
+
+## Deployment Report
+
+### Backend Deployment Platform: Render
+
+The backend API is deployed on [Render](https://render.com).
+
+#### Backend Setup Steps on Render
+
+1. **Create a Web Service**
+   - Log in to [Render Dashboard](https://dashboard.render.com/)
+   - Click **New** → **Web Service**
+   - Connect your GitHub/GitLab repository
+   - Select the repository and configure the backend
+
+2. **Configure Build Settings**
+   - **Root Directory:** `backend` (or set build command path accordingly)
+   - **Build Command:** `npm install && npm run build`
+   - **Start Command:** `npm start`
+   - **Runtime:** Node
+
+3. **Set Environment Variables**
+   - Go to **Environment** tab in the Render dashboard
+   - Add all required variables (see [Environment Variables](#environment-variables-used-without-secrets) below)
+
+4. **Deploy**
+   - Render automatically deploys on push to the connected branch
+   - Monitor build logs in the Render dashboard
+
+---
+
+### Frontend Deployment Platform
+
+> **Placeholder:** Add frontend deployment platform and setup steps here when the frontend is deployed (e.g., Vercel, Netlify, or other hosting).
+
+---
+
+### Environment Variables Used (without exposing secrets)
+
+The following environment variables are used by the backend. Values are configured in the Render dashboard (or equivalent) and must not be committed to source control.
+
+| Variable | Purpose | Example (non-secret) |
+| -------- | ------- | -------------------- |
+| `NODE_ENV` | Environment mode | `production` |
+| `PORT` | Server port (Render sets this automatically) | `5000` |
+| `MONGODB_URI` | MongoDB connection string | `mongodb+srv://...` (Atlas) |
+| `JWT_ACCESS_SECRET` | JWT access token signing | *(stored as secret)* |
+| `JWT_REFRESH_SECRET` | JWT refresh token signing | *(stored as secret)* |
+| `JWT_ACCESS_EXPIRATION` | Access token TTL | `15m` |
+| `JWT_REFRESH_EXPIRATION` | Refresh token TTL | `7d` |
+| `CORS_ORIGIN` | Allowed frontend origin(s) | `https://your-frontend.onrender.com` |
+| `RATE_LIMIT_WINDOW_MS` | Rate limit window | `900000` |
+| `RATE_LIMIT_MAX` | Max requests per window | `100` |
+| `STRIPE_SECRET_KEY` | Stripe API key | `sk_live_...` or `sk_test_...` |
+| `GOOGLE_MAPS_API_KEY` | Geocoding / Maps API | *(stored as secret)* |
+| `RXNORM_API_BASE_URL` | Drug validation API base | `https://rxnav.nlm.nih.gov/REST` or `mock` |
+
+---
+
+### Live URLs
+
+| Service | URL |
+| ------- | --- |
+| **Deployed Backend API** | https://medication-tracking-system.onrender.com/api |
+| **API Documentation (Swagger)** | https://medication-tracking-system.onrender.com/api-docs/ |
+| **Deployed Frontend Application** | *(Placeholder: Add frontend URL when deployed)* |
+
+---
+
+### Screenshots or Evidence of Successful Deployment
+
+> **Placeholder:** Add screenshots or evidence of successful deployment here. You can upload images and reference them like this:
+>
+> `![Backend Deployment](docs/screenshots/backend-deployment.png)`
+>
+> `![API Docs Live](docs/screenshots/api-docs-live.png)`
+>
+> `![Frontend Live](docs/screenshots/frontend-live.png)`

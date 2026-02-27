@@ -14,6 +14,7 @@ import {
   createPharmacyStaff,
   createSystemAdmin,
 } from '../helpers/test-data.helper';
+import { CreatePharmacyInput } from '@validators/pharmacy.validator';
 
 describe('PharmacyService', () => {
   beforeAll(async () => {
@@ -70,7 +71,7 @@ describe('PharmacyService', () => {
       const geoSpy = jest.spyOn(GeocodingService, 'geocodeAddress');
 
       const pharmacy = await PharmacyService.createPharmacy(
-        payload,
+        payload as CreatePharmacyInput,
         staff._id.toString()
       );
 
@@ -96,10 +97,10 @@ describe('PharmacyService', () => {
       const staff = await createPharmacyStaff();
       const payload = baseCreatePayload();
 
-      await PharmacyService.createPharmacy(payload, staff._id.toString());
+      await PharmacyService.createPharmacy(payload as CreatePharmacyInput, staff._id.toString());
 
       await expect(
-        PharmacyService.createPharmacy(payload, staff._id.toString())
+        PharmacyService.createPharmacy(payload as CreatePharmacyInput, staff._id.toString())
       ).rejects.toThrow('A pharmacy with this license number already exists');
     });
 
@@ -107,16 +108,16 @@ describe('PharmacyService', () => {
       const staff = await createPharmacyStaff();
       const payload = baseCreatePayload();
 
-      await PharmacyService.createPharmacy(payload, staff._id.toString());
+      await PharmacyService.createPharmacy(payload as CreatePharmacyInput, staff._id.toString());
 
       const secondPayload = {
         ...baseCreatePayload(),
         name: 'Branch Pharmacy',
         licenseNumber: 'LIC-67890',
-      };
+      } as CreatePharmacyInput;
 
       await expect(
-        PharmacyService.createPharmacy(secondPayload, staff._id.toString())
+        PharmacyService.createPharmacy(secondPayload as CreatePharmacyInput, staff._id.toString())
       ).rejects.toThrow('This user already owns an active pharmacy');
     });
   });
@@ -313,7 +314,7 @@ describe('PharmacyService', () => {
       const payload = baseCreatePayload();
 
       const created = await PharmacyService.createPharmacy(
-        payload,
+        payload as CreatePharmacyInput,
         staff._id.toString()
       );
 
@@ -343,7 +344,7 @@ describe('PharmacyService', () => {
       const payload = baseCreatePayload();
 
       const created = await PharmacyService.createPharmacy(
-        payload,
+        payload as CreatePharmacyInput,
         staff._id.toString()
       );
 
@@ -365,7 +366,7 @@ describe('PharmacyService', () => {
       const payload = baseCreatePayload();
 
       const created = await PharmacyService.createPharmacy(
-        payload,
+        payload as CreatePharmacyInput,
         owner._id.toString()
       );
 
@@ -388,7 +389,7 @@ describe('PharmacyService', () => {
       const payload = baseCreatePayload();
 
       const created = await PharmacyService.createPharmacy(
-        payload,
+        payload as CreatePharmacyInput,
         staff._id.toString()
       );
 
@@ -415,7 +416,7 @@ describe('PharmacyService', () => {
       const payload = baseCreatePayload();
 
       const created = await PharmacyService.createPharmacy(
-        payload,
+        payload as CreatePharmacyInput,
         staff._id.toString()
       );
 
@@ -434,7 +435,7 @@ describe('PharmacyService', () => {
       const payload = baseCreatePayload();
 
       const created = await PharmacyService.createPharmacy(
-        payload,
+        payload as CreatePharmacyInput,
         staff._id.toString()
       );
 
@@ -455,7 +456,7 @@ describe('PharmacyService', () => {
       const payload = baseCreatePayload();
 
       const created = await PharmacyService.createPharmacy(
-        payload,
+        payload as CreatePharmacyInput,
         owner._id.toString()
       );
 
@@ -559,7 +560,7 @@ describe('PharmacyService', () => {
       const payload = baseCreatePayload();
 
       const pharmacy = await PharmacyService.createPharmacy(
-        { ...payload, licenseNumber: 'LIC-R1' },
+        { ...payload, licenseNumber: 'LIC-R1' } as CreatePharmacyInput,
         staff._id.toString()
       );
 
@@ -592,7 +593,7 @@ describe('PharmacyService', () => {
       const payload = baseCreatePayload();
 
       const pharmacy = await PharmacyService.createPharmacy(
-        { ...payload, licenseNumber: 'LIC-R2' },
+        { ...payload, licenseNumber: 'LIC-R2' } as CreatePharmacyInput,
         staff._id.toString()
       );
 
@@ -625,7 +626,7 @@ describe('PharmacyService', () => {
       const payload = baseCreatePayload();
 
       const pharmacy = await PharmacyService.createPharmacy(
-        { ...payload, licenseNumber: 'LIC-R3' },
+        { ...payload, licenseNumber: 'LIC-R3' } as CreatePharmacyInput,
         staff._id.toString()
       );
 
@@ -647,7 +648,7 @@ describe('PharmacyService', () => {
       const payload = baseCreatePayload();
 
       const pharmacy = await PharmacyService.createPharmacy(
-        { ...payload, licenseNumber: 'LIC-R4' },
+        { ...payload, licenseNumber: 'LIC-R4' } as CreatePharmacyInput,
         staff._id.toString()
       );
 
