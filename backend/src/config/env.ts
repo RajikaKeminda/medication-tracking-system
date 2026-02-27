@@ -16,6 +16,7 @@ const envSchema = z.object({
   RATE_LIMIT_MAX: z.string().default('100'),
   STRIPE_SECRET_KEY: z.string().default('sk_test_mock_key'),
   GOOGLE_MAPS_API_KEY: z.string().default('mock-google-maps-key'),
+  RXNORM_API_BASE_URL: z.string().default('mock'),
 });
 
 const parsed = envSchema.safeParse(process.env);
