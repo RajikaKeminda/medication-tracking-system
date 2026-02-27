@@ -2911,11 +2911,6 @@ The following environment variables are used by the backend. Values are configur
 ---
 
 ### Screenshots or Evidence of Successful Deployment
+<img width="1425" height="682" alt="Screenshot 2026-02-27 at 21 31 51" src="https://github.com/user-attachments/assets/a14ae963-7a7d-4300-a9e9-11b862699b52" />
 
-> **Placeholder:** Add screenshots or evidence of successful deployment here. You can upload images and reference them like this:
->
-> `![Backend Deployment](docs/screenshots/backend-deployment.png)`
->
-> `![API Docs Live](docs/screenshots/api-docs-live.png)`
->
-> `![Frontend Live](docs/screenshots/frontend-live.png)`
+<img width="1436" height="761" alt="Screenshot 2026-02-27 at 23 20 55" src="https://github.com/user-attachments/assets/f4c02f39-9a5a-4ce9-93fd-a24c1dba4002" />
