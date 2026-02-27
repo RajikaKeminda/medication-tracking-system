@@ -31,6 +31,16 @@
     - [Update Request](#7-update-request)
     - [Update Request Status](#8-update-request-status)
     - [Cancel Request](#9-cancel-request)
+- [Pharmacy Management Endpoints](#pharmacy-management-endpoints)
+    - [Register Pharmacy](#1-register-pharmacy)
+    - [List Pharmacies](#2-list-pharmacies)
+    - [Find Nearby Pharmacies](#3-find-nearby-pharmacies)
+    - [Get Pharmacy by ID](#4-get-pharmacy-by-id)
+    - [Update Pharmacy](#5-update-pharmacy)
+    - [Deactivate Pharmacy](#6-deactivate-pharmacy)
+    - [Verify Pharmacy](#7-verify-pharmacy)
+    - [Add Pharmacy Review](#8-add-pharmacy-review)
+    - [Get Pharmacy Reviews](#9-get-pharmacy-reviews)
 - [Inventory Management Endpoints](#inventory-management-endpoints)
     - [Create Inventory Item](#1-create-inventory-item)
     - [Get All Inventory Items](#2-get-all-inventory-items)
@@ -1348,6 +1358,581 @@ Cancels a medication request. Patients can cancel their own requests; pharmacy s
 
 ---
 
+### Pharmacy Management Endpoints
+
+Base URL: `/api/pharmacies`
+
+Pharmacy management endpoints power pharmacy registration, discovery, verification, and user reviews. They are used both by pharmacy staff (back-office workflows) and by patients searching for nearby, verified pharmacies.
+
+---
+
+#### 1. Register Pharmacy
+
+Registers a new pharmacy for a staff owner. Enforces unique license numbers and one active pharmacy per owner, and geocodes the address via the configured geocoding service.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `POST /api/pharmacies` |
+| **Auth** | Required |
+| **Role** | `Pharmacy Staff`, `System Admin` |
+
+**Request Body:**
+
+```json
+{
+  "name": "Central Pharmacy",
+  "licenseNumber": "LIC-12345",
+  "location": {
+    "address": "123 Main Street",
+    "city": "Colombo",
+    "province": "Western",
+    "postalCode": "10100"
+  },
+  "contactInfo": {
+    "phone": "+94771234567",
+    "email": "central@pharmacy.com",
+    "website": "https://central-pharmacy.com",
+    "emergencyContact": "+94770000000"
+  },
+  "operatingHours": {
+    "monday":    { "open": "09:00", "close": "17:00", "isClosed": false },
+    "tuesday":   { "open": "09:00", "close": "17:00", "isClosed": false },
+    "wednesday": { "open": "09:00", "close": "17:00", "isClosed": false },
+    "thursday":  { "open": "09:00", "close": "17:00", "isClosed": false },
+    "friday":    { "open": "09:00", "close": "17:00", "isClosed": false },
+    "saturday":  { "open": "09:00", "close": "13:00", "isClosed": false },
+    "sunday":    { "open": "00:00", "close": "00:00", "isClosed": true }
+  },
+  "serviceRadius": 5,
+  "facilityType": "retail",
+  "services": ["24/7 service", "Home delivery"],
+  "images": ["https://example.com/image1.jpg"],
+  "certifications": ["SLMC-123"]
+}
+```
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `name` | string | Yes | Pharmacy display name (2–150 chars) |
+| `licenseNumber` | string | Yes | Unique license number; duplicate is rejected |
+| `location.address` | string | Yes | Street address |
+| `location.city` | string | Yes | City name (exact match used for some filters) |
+| `location.province` | string | Yes | Province/region |
+| `location.postalCode` | string | Yes | Postal/ZIP code |
+| `contactInfo.phone` | string | Yes | Phone number (`+?[digits/space/-()]`, 7–20 chars) |
+| `contactInfo.email` | string | Yes | Contact email |
+| `contactInfo.website` | string | No | Public website URL |
+| `contactInfo.emergencyContact` | string | No | Emergency contact phone |
+| `operatingHours` | object | Yes | Daily open/close times and closure flags for all 7 days |
+| `serviceRadius` | number | Yes | Delivery/service radius in km (>= 0) |
+| `facilityType` | string | No | One of `retail`, `hospital`, `clinic` (default: `retail`) |
+| `services` | string[] | No | List of services (e.g. vaccination, home delivery) |
+| `images` | string[] | No | Public image URLs |
+| `certifications` | string[] | No | Accreditation / license identifiers |
+
+**Success Response (201):**
+
+```json
+{
+  "success": true,
+  "message": "Pharmacy registered successfully",
+  "data": {
+    "_id": "675a1b2c3d4e5f6a7b8c9d0e",
+    "name": "Central Pharmacy",
+    "licenseNumber": "LIC-12345",
+    "location": {
+      "address": "123 Main Street",
+      "city": "Colombo",
+      "province": "Western",
+      "postalCode": "10100",
+      "coordinates": {
+        "latitude": 6.9271,
+        "longitude": 79.8612
+      }
+    },
+    "contactInfo": {
+      "phone": "+94771234567",
+      "email": "central@pharmacy.com"
+    },
+    "operatingHours": { "...7-day schedule..." },
+    "serviceRadius": 5,
+    "facilityType": "retail",
+    "services": ["24/7 service", "Home delivery"],
+    "images": ["https://example.com/image1.jpg"],
+    "certifications": ["SLMC-123"],
+    "ownerId": "60d5ecb54b24a90015c0b1a1",
+    "isVerified": false,
+    "rating": 0,
+    "totalReviews": 0,
+    "isActive": true,
+    "createdAt": "2026-02-27T10:00:00.000Z",
+    "updatedAt": "2026-02-27T10:00:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 400 | Validation errors in body (invalid email/phone, missing fields, invalid hours, etc.) |
+| 401 | Missing or invalid JWT access token |
+| 403 | Authenticated user is not `Pharmacy Staff` or `System Admin` |
+| 409 | License number already exists, or owner already has an active pharmacy |
+
+---
+
+#### 2. List Pharmacies
+
+Returns a paginated, filterable list of active pharmacies. This is typically used on the public search UI.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `GET /api/pharmacies` |
+| **Auth** | Not required (public) |
+| **Role** | Any |
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+| --------- | ---- | ------- | ----------- |
+| `city` | string | — | Filter by exact city name (case-insensitive) |
+| `isVerified` | boolean (as string) | — | `true` or `false`; filters verified status |
+| `search` | string | — | Full-text search across pharmacy name and location |
+| `page` | integer (string) | `1` | Page number (1-based) |
+| `limit` | integer (string) | `10` | Items per page |
+| `sortBy` | string | `createdAt` | Sort field (e.g. `createdAt`, `rating`) |
+| `sortOrder` | string | `desc` | `asc` or `desc` |
+
+**Example Request:**
+
+```
+GET /api/pharmacies?city=Colombo&isVerified=true&page=1&limit=10&sortBy=rating&sortOrder=desc
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Pharmacies retrieved successfully",
+  "data": {
+    "items": [
+      {
+        "_id": "675a1b2c3d4e5f6a7b8c9d0e",
+        "name": "Central Pharmacy",
+        "location": { "city": "Colombo" },
+        "isVerified": true,
+        "rating": 4.7,
+        "totalReviews": 32,
+        "serviceRadius": 5,
+        "facilityType": "retail"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "pages": 1
+  }
+}
+```
+
+---
+
+#### 3. Find Nearby Pharmacies
+
+Finds verified pharmacies within a given radius of the specified coordinates using a geospatial query.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `GET /api/pharmacies/nearby` |
+| **Auth** | Not required (public) |
+| **Role** | Any |
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+| --------- | ---- | -------- | ------- | ----------- |
+| `latitude` | number (string) | Yes | — | Latitude in decimal degrees (`-90` to `90`) |
+| `longitude` | number (string) | Yes | — | Longitude in decimal degrees (`-180` to `180`) |
+| `radiusKm` | number (string) | No | `5` | Search radius in kilometers (`0.1`–`100`) |
+
+**Example Request:**
+
+```
+GET /api/pharmacies/nearby?latitude=6.9271&longitude=79.8612&radiusKm=10
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Nearby pharmacies retrieved successfully",
+  "data": [
+    {
+      "_id": "675a1b2c3d4e5f6a7b8c9d0e",
+      "name": "Nearby Verified",
+      "location": {
+        "city": "Colombo",
+        "coordinates": {
+          "latitude": 6.9271,
+          "longitude": 79.8612
+        }
+      },
+      "isVerified": true,
+      "rating": 4.8,
+      "totalReviews": 5,
+      "serviceRadius": 5
+    }
+  ]
+}
+```
+
+---
+
+#### 4. Get Pharmacy by ID
+
+Retrieves full details for a single active pharmacy.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `GET /api/pharmacies/:id` |
+| **Auth** | Not required (public) |
+| **Role** | Any |
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `id` | string (ObjectId) | Pharmacy ID |
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Pharmacy retrieved successfully",
+  "data": {
+    "_id": "675a1b2c3d4e5f6a7b8c9d0e",
+    "name": "Central Pharmacy",
+    "licenseNumber": "LIC-12345",
+    "location": { "...": "..." },
+    "contactInfo": { "...": "..." },
+    "operatingHours": { "...": "..." },
+    "serviceRadius": 5,
+    "isVerified": true,
+    "verificationDate": "2026-02-27T10:00:00.000Z",
+    "rating": 4.7,
+    "totalReviews": 32,
+    "facilityType": "retail",
+    "services": ["24/7 service", "Home delivery"],
+    "images": [],
+    "certifications": [],
+    "isActive": true
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 404 | Pharmacy not found or inactive |
+
+---
+
+#### 5. Update Pharmacy
+
+Updates editable pharmacy fields. Only the pharmacy owner (`Pharmacy Staff`) or a `System Admin` can update a pharmacy. When the address changes, the geo-coordinates are re-geocoded automatically.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `PUT /api/pharmacies/:id` |
+| **Auth** | Required |
+| **Role** | `Pharmacy Staff` (owner only), `System Admin` |
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `id` | string (ObjectId) | Pharmacy ID |
+
+**Request Body (all fields optional, at least one required):**
+
+```json
+{
+  "name": "Updated Pharmacy Name",
+  "location": {
+    "address": "456 New Street",
+    "city": "Kandy",
+    "province": "Central",
+    "postalCode": "20000"
+  },
+  "contactInfo": {
+    "phone": "+94771111111"
+  },
+  "operatingHours": {
+    "saturday": { "open": "09:00", "close": "15:00", "isClosed": false }
+  },
+  "serviceRadius": 10,
+  "facilityType": "clinic",
+  "services": ["Home delivery"],
+  "images": ["https://example.com/new-image.jpg"],
+  "certifications": ["SLMC-123", "ISO-9001"],
+  "isActive": true
+}
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Pharmacy updated successfully",
+  "data": {
+    "_id": "675a1b2c3d4e5f6a7b8c9d0e",
+    "name": "Updated Pharmacy Name",
+    "location": {
+      "city": "Kandy",
+      "coordinates": {
+        "latitude": 7.2906,
+        "longitude": 80.6337
+      }
+    },
+    "serviceRadius": 10,
+    "facilityType": "clinic",
+    "services": ["Home delivery"],
+    "isActive": true
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 400 | No fields provided, or validation errors |
+| 401 | Missing or invalid JWT access token |
+| 403 | Authenticated user is neither the owner nor a `System Admin` |
+| 404 | Pharmacy not found or inactive |
+
+---
+
+#### 6. Deactivate Pharmacy
+
+Soft-deactivates a pharmacy by setting `isActive` to `false`. Deactivated pharmacies are excluded from search and lookup endpoints.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `DELETE /api/pharmacies/:id` |
+| **Auth** | Required |
+| **Role** | `Pharmacy Staff` (owner only), `System Admin` |
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `id` | string (ObjectId) | Pharmacy ID |
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Pharmacy deactivated successfully",
+  "data": {
+    "_id": "675a1b2c3d4e5f6a7b8c9d0e",
+    "isActive": false
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 401 | Missing or invalid JWT access token |
+| 403 | Authenticated user is neither the owner nor a `System Admin` |
+| 404 | Pharmacy not found or already inactive |
+
+---
+
+#### 7. Verify Pharmacy
+
+Marks a pharmacy as verified and sets a verification timestamp. Only system administrators can perform this action.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `PATCH /api/pharmacies/:id/verify` |
+| **Auth** | Required |
+| **Role** | `System Admin` |
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `id` | string (ObjectId) | Pharmacy ID |
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Pharmacy verified successfully",
+  "data": {
+    "_id": "675a1b2c3d4e5f6a7b8c9d0e",
+    "isVerified": true,
+    "verificationDate": "2026-02-27T10:00:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 401 | Missing or invalid JWT access token |
+| 403 | Authenticated user is not `System Admin` |
+| 404 | Pharmacy not found or inactive |
+
+---
+
+#### 8. Add Pharmacy Review
+
+Allows a patient to submit a single review for a verified pharmacy. Updating aggregate rating and total review count is handled atomically.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `POST /api/pharmacies/:id/reviews` |
+| **Auth** | Required |
+| **Role** | `Patient` |
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `id` | string (ObjectId) | Pharmacy ID |
+
+**Request Body:**
+
+```json
+{
+  "rating": 5,
+  "comment": "Excellent service and fast delivery",
+  "serviceQuality": 5,
+  "deliverySpeed": 4,
+  "productAvailability": 5
+}
+```
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `rating` | integer | Yes | Overall rating from `1` to `5` |
+| `comment` | string | No | Free-text review (max 1000 chars) |
+| `serviceQuality` | integer | No | Service rating `1`–`5` |
+| `deliverySpeed` | integer | No | Delivery speed rating `1`–`5` |
+| `productAvailability` | integer | No | Stock availability rating `1`–`5` |
+
+**Success Response (201):**
+
+```json
+{
+  "success": true,
+  "message": "Review added successfully",
+  "data": {
+    "_id": "675a1b2c3d4e5f6a7b8c9d0f",
+    "pharmacyId": "675a1b2c3d4e5f6a7b8c9d0e",
+    "userId": "60d5ecb54b24a90015c0b1a1",
+    "rating": 5,
+    "comment": "Excellent service and fast delivery",
+    "serviceQuality": 5,
+    "deliverySpeed": 4,
+    "productAvailability": 5,
+    "isVerifiedPurchase": false,
+    "createdAt": "2026-02-27T11:00:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 400 | Validation errors or attempting to review an unverified pharmacy |
+| 401 | Missing or invalid JWT access token |
+| 403 | Authenticated user is not a `Patient` |
+| 404 | Pharmacy not found or inactive |
+| 409 | Patient has already submitted a review for this pharmacy |
+
+---
+
+#### 9. Get Pharmacy Reviews
+
+Returns paginated reviews for a pharmacy, ordered by creation time.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `GET /api/pharmacies/:id/reviews` |
+| **Auth** | Not required (public) |
+| **Role** | Any |
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `id` | string (ObjectId) | Pharmacy ID |
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+| --------- | ---- | ------- | ----------- |
+| `page` | integer (string) | `1` | Page number |
+| `limit` | integer (string) | `10` | Reviews per page |
+| `sortOrder` | string | `desc` | `asc` or `desc` by creation time |
+
+**Example Request:**
+
+```
+GET /api/pharmacies/675a1b2c3d4e5f6a7b8c9d0e/reviews?page=1&limit=10&sortOrder=desc
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Reviews retrieved successfully",
+  "data": {
+    "items": [
+      {
+        "_id": "675a1b2c3d4e5f6a7b8c9d0f",
+        "rating": 5,
+        "comment": "Excellent service and fast delivery",
+        "serviceQuality": 5,
+        "deliverySpeed": 4,
+        "productAvailability": 5,
+        "userId": {
+          "_id": "60d5ecb54b24a90015c0b1a1",
+          "name": "Test Patient"
+        },
+        "createdAt": "2026-02-27T11:00:00.000Z"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "pages": 1
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 404 | Pharmacy not found or inactive |
+
+---
+
 ### Inventory Management Endpoints
 
 Base URL: `/api/inventory`
@@ -1563,12 +2148,6 @@ GET /api/inventory/low-stock?pharmacyId=64f1a2b3c4d5e6f7a8b9c0d2
   ]
 }
 ```
-
-**Error Responses:**
-
-| Status | Condition |
-| ------ | --------- |
-| 401 | Missing or invalid auth token |
 
 ---
 
@@ -1833,6 +2412,8 @@ cp .env.example .env
 
 Tests use **MongoDB Memory Server** (`mongodb-memory-server`), which spins up an ephemeral in-memory MongoDB instance — no external database configuration is needed.
 
+The **Pharmacy Management** module (`PharmacyService`, `Pharmacy` model, and related review logic) reuses this same Jest + MongoDB Memory Server setup. No additional environment variables are required beyond the shared configuration described above.
+
 #### Test Framework Configuration
 
 The project uses **Jest** with **ts-jest** for TypeScript support. Configuration is in `backend/jest.config.ts`:
@@ -1940,6 +2521,18 @@ The coverage report will be generated in the `backend/coverage/` directory in te
 | `updateRequestStatus` | 4 | Valid transition, invalid transition, pharmacy scope guard, response date handling |
 | `cancelRequest` | 6 | Patient cancellation, staff/admin cancellation, ownership guard, fulfilled/cancelled guards, not found |
 
+#### Pharmacy Management Unit Tests
+
+Pharmacy management logic is covered by `backend/src/__tests__/unit/pharmacy.service.test.ts` (21 unit tests) and focuses on:
+
+- Creating pharmacies with geocoded locations, enforcing unique license numbers, and preventing multiple active pharmacies per owner.
+- Listing pharmacies with pagination and filters (`city`, `isVerified`).
+- Retrieving pharmacies by ID, including guards for inactive or missing records.
+- Updating pharmacy details with owner/admin permission checks and automatic re-geocoding when addresses change.
+- Verifying and deactivating pharmacies, including permission and not-found checks.
+- Geo-based nearby search that returns only active, verified pharmacies within a radius.
+- Review creation and retrieval for pharmacies, including preventing duplicate reviews per user, disallowing reviews for unverified pharmacies, and paginating/sorting review lists.
+
 **InventoryService (36 tests across 6 describe blocks):**
 
 | Service Method | Tests | Key Scenarios |
@@ -2022,6 +2615,12 @@ npm test
 | `PUT /api/inventory/:id` | 8 | Staff update (200), admin update (200), Patient blocked (403), auth required (401), empty body (400), not found (404), invalid ID format (400), negative quantity (400) |
 | `DELETE /api/inventory/:id` | 7 | Staff delete (200), admin delete (200), Patient blocked (403), auth required (401), not found (404), invalid ID format (400), verify item removed from DB |
 | Response Format | 2 | Standard success format validation, standard error format validation |
+
+---
+
+#### Pharmacy Management Integration Tests
+
+At present there is **no dedicated integration test file** for the pharmacy management endpoints (e.g. `/api/pharmacies`, `/api/pharmacies/nearby`, `/api/pharmacies/:id/reviews`). To add them, follow the same patterns used in `order.api.test.ts` and `request.api.test.ts`: use the shared helpers in `src/__tests__/helpers/` to spin up the Express app, seed users and pharmacies, and assert on authentication/authorization, validation, and database side effects for each pharmacy route.
 
 ---
 
@@ -2120,6 +2719,10 @@ artillery run src/__tests__/performance/inventory.perf.yml
 | Get urgent requests | 10% | GET | `/api/requests/urgent?page=1&limit=10` | Staff |
 | Create new request | 10% | POST | `/api/requests` | Patient |
 | Update request status | 5% | PATCH | `/api/requests/:id/status` | Staff |
+
+#### Pharmacy Management Performance Tests
+
+There is currently **no standalone Artillery performance suite** targeting the pharmacy management endpoints. When needed, you can create new performance specs (for example, `pharmacy.perf.yml`) alongside the existing order/request configs to simulate public search traffic (`GET /api/pharmacies`, `/api/pharmacies/nearby`) and review activity (`GET`/`POST /api/pharmacies/:id/reviews`) under load, using the same seeding and environment patterns described above.
 
 **Inventory Performance Test Scenarios:**
 

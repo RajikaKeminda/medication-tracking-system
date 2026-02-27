@@ -239,6 +239,7 @@ export class PharmacyService {
 
     return pharmacies;
   }
+  
 
   static async addReview(
     pharmacyId: string,
@@ -304,6 +305,7 @@ export class PharmacyService {
         .populate('userId', 'name'),
       Review.countDocuments({ pharmacyId }),
     ]);
+
 
     return {
       items,
