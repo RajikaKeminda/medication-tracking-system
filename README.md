@@ -41,6 +41,14 @@
     - [Verify Pharmacy](#7-verify-pharmacy)
     - [Add Pharmacy Review](#8-add-pharmacy-review)
     - [Get Pharmacy Reviews](#9-get-pharmacy-reviews)
+- [Inventory Management Endpoints](#inventory-management-endpoints)
+    - [Create Inventory Item](#1-create-inventory-item)
+    - [Get All Inventory Items](#2-get-all-inventory-items)
+    - [Get Low-Stock Items](#3-get-low-stock-items)
+    - [Get Expiring Items](#4-get-expiring-items)
+    - [Get Inventory Item by ID](#5-get-inventory-item-by-id)
+    - [Update Inventory Item](#6-update-inventory-item)
+    - [Delete Inventory Item](#7-delete-inventory-item)
 - [Testing Instruction Report](#testing-instruction-report)
   - [Testing Environment Configuration](#testing-environment-configuration)
   - [Running Unit Tests](#running-unit-tests)
@@ -1925,6 +1933,443 @@ GET /api/pharmacies/675a1b2c3d4e5f6a7b8c9d0e/reviews?page=1&limit=10&sortOrder=d
 
 ---
 
+### Inventory Management Endpoints
+
+Base URL: `/api/inventory`
+
+The Inventory Management module handles pharmacy medication stock — creating, updating, querying, and deleting inventory items. Medication names are validated against the **RxNorm** drug database (or a mock database in test/development mode) before being added.
+
+---
+
+#### 1. Create Inventory Item
+
+Adds a new medication to the pharmacy inventory. The medication name is validated against the RxNorm drug database before creation. Duplicate medications within the same pharmacy are rejected.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `POST /api/inventory` |
+| **Auth** | Required |
+| **Role** | `Pharmacy Staff`, `System Admin` |
+
+**Request Body:**
+
+```json
+{
+  "pharmacyId": "64f1a2b3c4d5e6f7a8b9c0d2",
+  "medicationName": "Amoxicillin",
+  "genericName": "Amoxicillin",
+  "category": "prescription",
+  "dosage": "500mg",
+  "form": "capsule",
+  "quantity": 100,
+  "unitPrice": 12.50,
+  "batchNumber": "BATCH-2024-001",
+  "expiryDate": "2025-12-31T00:00:00.000Z",
+  "manufacturer": "PharmaCorp",
+  "requiresPrescription": true,
+  "lowStockThreshold": 10,
+  "storageConditions": "Store below 25°C",
+  "sideEffects": ["Nausea", "Diarrhea"],
+  "contraindications": ["Penicillin allergy"],
+  "activeIngredients": ["Amoxicillin trihydrate"]
+}
+```
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `pharmacyId` | string (ObjectId) | Yes | Pharmacy that owns this item |
+| `medicationName` | string | Yes | Must be recognized by RxNorm drug database |
+| `genericName` | string | No | Auto-filled from RxNorm if omitted |
+| `category` | string | No | `prescription`, `otc`, or `controlled` (default: `otc`) |
+| `dosage` | string | No | Dosage amount (e.g., `500mg`) |
+| `form` | string | No | `tablet`, `capsule`, `syrup`, or `injection` |
+| `quantity` | integer | Yes | Stock quantity (min: 0) |
+| `unitPrice` | number | Yes | Price per unit (min: 0) |
+| `batchNumber` | string | No | Batch identifier |
+| `expiryDate` | string (ISO 8601) | No | Medication expiry date |
+| `manufacturer` | string | No | Manufacturer name |
+| `requiresPrescription` | boolean | No | Whether prescription is required (default: `false`) |
+| `lowStockThreshold` | integer | No | Low-stock alert threshold (default: `10`) |
+| `storageConditions` | string | No | Storage requirements |
+| `sideEffects` | string[] | No | List of side effects |
+| `contraindications` | string[] | No | List of contraindications |
+| `activeIngredients` | string[] | No | List of active ingredients |
+
+**Success Response (201):**
+
+```json
+{
+  "success": true,
+  "message": "Inventory item created successfully",
+  "data": {
+    "_id": "64f1a2b3c4d5e6f7a8b9c0d1",
+    "pharmacyId": "64f1a2b3c4d5e6f7a8b9c0d2",
+    "medicationName": "Amoxicillin",
+    "genericName": "Amoxicillin",
+    "category": "prescription",
+    "dosage": "500mg",
+    "form": "capsule",
+    "quantity": 100,
+    "unitPrice": 12.50,
+    "batchNumber": "BATCH-2024-001",
+    "expiryDate": "2025-12-31T00:00:00.000Z",
+    "manufacturer": "PharmaCorp",
+    "requiresPrescription": true,
+    "lowStockThreshold": 10,
+    "storageConditions": "Store below 25°C",
+    "sideEffects": ["Nausea", "Diarrhea"],
+    "contraindications": ["Penicillin allergy"],
+    "activeIngredients": ["Amoxicillin trihydrate"],
+    "createdAt": "2026-02-27T10:00:00.000Z",
+    "updatedAt": "2026-02-27T10:00:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 400 | Missing/invalid fields, medication not found in drug database, negative quantity/price, invalid category/form enum |
+| 401 | Missing or invalid auth token |
+| 403 | Patient role attempts to create |
+| 409 | Medication already exists in this pharmacy's inventory |
+
+---
+
+#### 2. Get All Inventory Items
+
+Retrieves a paginated list of inventory items with filtering and search support.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `GET /api/inventory` |
+| **Auth** | Required |
+| **Role** | Any authenticated user |
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+| --------- | ---- | ------- | ----------- |
+| `pharmacyId` | string | — | Filter by pharmacy ObjectId |
+| `category` | string | — | Filter: `prescription`, `otc`, `controlled` |
+| `search` | string | — | Search medication name, generic name, or manufacturer |
+| `requiresPrescription` | string | — | Filter: `true` or `false` |
+| `page` | string | `1` | Page number |
+| `limit` | string | `10` | Items per page |
+| `sortBy` | string | `createdAt` | Sort field |
+| `sortOrder` | string | `desc` | `asc` or `desc` |
+
+**Example Request:**
+
+```
+GET /api/inventory?category=prescription&search=Amoxicillin&page=1&limit=10&sortOrder=desc
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Inventory items retrieved successfully",
+  "data": {
+    "items": [
+      {
+        "_id": "64f1a2b3c4d5e6f7a8b9c0d1",
+        "pharmacyId": {
+          "_id": "64f1a2b3c4d5e6f7a8b9c0d2",
+          "name": "City Pharmacy"
+        },
+        "medicationName": "Amoxicillin",
+        "genericName": "Amoxicillin",
+        "category": "prescription",
+        "quantity": 100,
+        "unitPrice": 12.50,
+        "requiresPrescription": true
+      }
+    ],
+    "pagination": {
+      "total": 25,
+      "page": 1,
+      "limit": 10,
+      "totalPages": 3
+    }
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 401 | Missing or invalid auth token |
+
+---
+
+#### 3. Get Low-Stock Items
+
+Retrieves inventory items where the current quantity is at or below the designated low-stock threshold (`quantity <= lowStockThreshold`). Results are sorted by quantity ascending.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `GET /api/inventory/low-stock` |
+| **Auth** | Required |
+| **Role** | Any authenticated user |
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+| --------- | ---- | ------- | ----------- |
+| `pharmacyId` | string | — | Filter by pharmacy ObjectId |
+
+**Example Request:**
+
+```
+GET /api/inventory/low-stock?pharmacyId=64f1a2b3c4d5e6f7a8b9c0d2
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Low stock items retrieved successfully",
+  "data": [
+    {
+      "_id": "64f1a2b3c4d5e6f7a8b9c0d1",
+      "medicationName": "Paracetamol 500mg",
+      "quantity": 5,
+      "lowStockThreshold": 10,
+      "pharmacyId": {
+        "_id": "64f1a2b3c4d5e6f7a8b9c0d2",
+        "name": "City Pharmacy"
+      }
+    }
+  ]
+}
+```
+
+---
+
+#### 4. Get Expiring Items
+
+Retrieves medications that are expiring within the specified number of days from today. Already expired items are excluded. Results are sorted by expiry date ascending.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `GET /api/inventory/expiring` |
+| **Auth** | Required |
+| **Role** | Any authenticated user |
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+| --------- | ---- | ------- | ----------- |
+| `days` | string | `30` | Number of days to look ahead |
+| `pharmacyId` | string | — | Filter by pharmacy ObjectId |
+
+**Example Request:**
+
+```
+GET /api/inventory/expiring?days=60&pharmacyId=64f1a2b3c4d5e6f7a8b9c0d2
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Expiring items retrieved successfully",
+  "data": [
+    {
+      "_id": "64f1a2b3c4d5e6f7a8b9c0d1",
+      "medicationName": "Amoxicillin",
+      "expiryDate": "2026-03-15T00:00:00.000Z",
+      "quantity": 50,
+      "pharmacyId": {
+        "_id": "64f1a2b3c4d5e6f7a8b9c0d2",
+        "name": "City Pharmacy"
+      }
+    }
+  ]
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 401 | Missing or invalid auth token |
+
+---
+
+#### 5. Get Inventory Item by ID
+
+Retrieves a single inventory item by its ObjectId, with populated pharmacy details.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `GET /api/inventory/:id` |
+| **Auth** | Required |
+| **Role** | Any authenticated user |
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `id` | string (ObjectId) | Inventory item ID |
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Inventory item retrieved successfully",
+  "data": {
+    "_id": "64f1a2b3c4d5e6f7a8b9c0d1",
+    "pharmacyId": {
+      "_id": "64f1a2b3c4d5e6f7a8b9c0d2",
+      "name": "City Pharmacy"
+    },
+    "medicationName": "Amoxicillin",
+    "genericName": "Amoxicillin",
+    "category": "prescription",
+    "dosage": "500mg",
+    "form": "capsule",
+    "quantity": 100,
+    "unitPrice": 12.50,
+    "requiresPrescription": true,
+    "createdAt": "2026-02-27T10:00:00.000Z",
+    "updatedAt": "2026-02-27T10:00:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 400 | Invalid ObjectId format |
+| 401 | Missing or invalid auth token |
+| 404 | Inventory item not found |
+
+---
+
+#### 6. Update Inventory Item
+
+Updates an existing inventory item's fields. If `medicationName` is being changed, it is re-validated against the RxNorm drug database. At least one field must be provided.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `PUT /api/inventory/:id` |
+| **Auth** | Required |
+| **Role** | `Pharmacy Staff`, `System Admin` |
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `id` | string (ObjectId) | Inventory item ID |
+
+**Request Body (all fields optional, at least one required):**
+
+```json
+{
+  "quantity": 200,
+  "unitPrice": 8.99,
+  "dosage": "250mg",
+  "expiryDate": "2026-06-30T00:00:00.000Z"
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `medicationName` | string | New name (re-validated against RxNorm) |
+| `genericName` | string | Generic name |
+| `category` | string | `prescription`, `otc`, or `controlled` |
+| `dosage` | string | Dosage amount |
+| `form` | string | `tablet`, `capsule`, `syrup`, or `injection` |
+| `quantity` | integer | Stock quantity (min: 0) |
+| `unitPrice` | number | Price per unit (min: 0) |
+| `batchNumber` | string | Batch identifier |
+| `expiryDate` | string (ISO 8601) | Expiry date |
+| `manufacturer` | string | Manufacturer |
+| `requiresPrescription` | boolean | Prescription requirement |
+| `lowStockThreshold` | integer | Low-stock threshold (min: 0) |
+| `storageConditions` | string | Storage requirements |
+| `sideEffects` | string[] | Side effects |
+| `contraindications` | string[] | Contraindications |
+| `activeIngredients` | string[] | Active ingredients |
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Inventory item updated successfully",
+  "data": {
+    "_id": "64f1a2b3c4d5e6f7a8b9c0d1",
+    "medicationName": "Amoxicillin",
+    "quantity": 200,
+    "unitPrice": 8.99,
+    "dosage": "250mg",
+    "expiryDate": "2026-06-30T00:00:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 400 | Empty update body, invalid fields, medication name not recognized, negative quantity/price, invalid ObjectId |
+| 401 | Missing or invalid auth token |
+| 403 | Patient role attempts to update |
+| 404 | Inventory item not found |
+
+---
+
+#### 7. Delete Inventory Item
+
+Permanently deletes an inventory item by its ObjectId.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `DELETE /api/inventory/:id` |
+| **Auth** | Required |
+| **Role** | `Pharmacy Staff`, `System Admin` |
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `id` | string (ObjectId) | Inventory item ID |
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Inventory item deleted successfully",
+  "data": {
+    "_id": "64f1a2b3c4d5e6f7a8b9c0d1",
+    "medicationName": "Amoxicillin",
+    "quantity": 100
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 400 | Invalid ObjectId format |
+| 401 | Missing or invalid auth token |
+| 403 | Patient role attempts to delete |
+| 404 | Inventory item not found |
+
+---
+
 ## Testing Instruction Report
 
 ### Testing Environment Configuration
@@ -1982,14 +2427,18 @@ The project uses **Jest** with **ts-jest** for TypeScript support. Configuration
 | `forceExit` | `true` | Force Jest to exit after tests complete |
 | `detectOpenHandles` | `true` | Warn about open handles preventing exit |
 | `verbose` | `true` | Detailed test output |
+| `diagnostics` | `false` | Disabled in ts-jest to speed up transformation |
 
-**Coverage collection** is configured for both Order and Request Medication module files:
+**Coverage collection** is configured for Order, Request Medication, and Inventory module files:
 - `src/services/order.service.ts`
 - `src/controllers/order.controller.ts`
 - `src/routes/order.routes.ts`
 - `src/services/request.service.ts`
 - `src/controllers/request.controller.ts`
 - `src/routes/request.routes.ts`
+- `src/services/inventory.service.ts`
+- `src/controllers/inventory.controller.ts`
+- `src/routes/inventory.routes.ts`
 
 #### Test Directory Structure
 
@@ -2001,24 +2450,28 @@ backend/src/__tests__/
 │   ├── db.helper.ts           # MongoDB Memory Server connect/disconnect/clear
 │   └── test-data.helper.ts    # Factory functions for test data
 ├── integration/
-│   ├── order.api.test.ts      # API-level integration tests (48 tests)
-│   └── request.api.test.ts   # Request API integration tests (47 tests)
+│   ├── order.api.test.ts          # Order API integration tests (48 tests)
+│   ├── request.api.test.ts        # Request API integration tests (47 tests)
+│   └── inventory.api.test.ts      # Inventory API integration tests (50 tests)
 ├── unit/
-│   ├── order.service.test.ts  # Service-level unit tests (44 tests)
-│   └── request.service.test.ts # Request service unit tests (52 tests)
+│   ├── order.service.test.ts      # Order service unit tests (44 tests)
+│   ├── request.service.test.ts    # Request service unit tests (52 tests)
+│   └── inventory.service.test.ts  # Inventory service unit tests (36 tests)
 └── performance/
-    ├── order.perf.yml         # Artillery load test configuration
-    ├── order.perf.processor.js # Artillery processor with auth setup
-    ├── request.perf.yml       # Request medication load test configuration
-    ├── request.perf.processor.js # Request medication test processor
-    └── seed-perf-data.js      # Performance test data seeding script
+    ├── order.perf.yml              # Order load test configuration
+    ├── order.perf.processor.js     # Order test processor
+    ├── request.perf.yml            # Request load test configuration
+    ├── request.perf.processor.js   # Request test processor
+    ├── inventory.perf.yml          # Inventory load test configuration
+    ├── inventory.perf.processor.js # Inventory test processor
+    └── seed-perf-data.js           # Performance test data seeding script
 ```
 
 ---
 
 ### Running Unit Tests
 
-Unit tests validate the business logic of both `OrderService` and `RequestService` in isolation against a real (in-memory) MongoDB instance. They cover all service methods including request creation, status transitions, updates, cancellations, pagination, and order lifecycle management.
+Unit tests validate the business logic of `OrderService`, `RequestService`, and `InventoryService` in isolation against a real (in-memory) MongoDB instance. They cover all service methods including request creation, status transitions, updates, cancellations, pagination, order lifecycle management, and inventory CRUD with drug validation.
 
 **Run all unit tests:**
 
@@ -2080,11 +2533,23 @@ Pharmacy management logic is covered by `backend/src/__tests__/unit/pharmacy.ser
 - Geo-based nearby search that returns only active, verified pharmacies within a radius.
 - Review creation and retrieval for pharmacies, including preventing duplicate reviews per user, disallowing reviews for unverified pharmacies, and paginating/sorting review lists.
 
+**InventoryService (36 tests across 6 describe blocks):**
+
+| Service Method | Tests | Key Scenarios |
+| -------------- | ----- | ------------- |
+| `create` | 8 | Successful creation, auto-fill genericName from RxNorm, use provided genericName, drug validation via DrugValidationService, duplicate conflict in same pharmacy, allow same name in different pharmacies, unrecognized medication name, expiryDate conversion, minimal required fields with defaults |
+| `getAll` | 8 | Paginated results, pagination limits, filter by pharmacyId, filter by category, filter by requiresPrescription, search by medication name, search by manufacturer, sort by quantity ascending, empty results for page beyond data |
+| `getById` | 3 | Successful retrieval, NOT_FOUND for non-existent ID, BAD_REQUEST for invalid ObjectId format |
+| `update` | 7 | Update fields, re-validate drug name on medicationName change, skip validation when name unchanged, expiryDate conversion, NOT_FOUND for non-existent item, BAD_REQUEST for invalid ObjectId, reject unrecognized medication name |
+| `delete` | 3 | Delete and return item, verify removal from DB, NOT_FOUND for non-existent item, BAD_REQUEST for invalid ObjectId |
+| `getLowStock` | 4 | Items at or below threshold, filter by pharmacyId, sorted by quantity ascending, empty array when no low-stock items |
+| `getExpiring` | 5 | Items within default 30-day window, custom days parameter, filter by pharmacyId, sorted by expiryDate ascending, excludes already-expired items, empty array when none expiring |
+
 ---
 
 ### Integration Testing Setup and Execution
 
-Integration tests validate the full HTTP request/response cycle through Express routes, middleware (authentication, authorization, validation), controllers, and services. They use **Supertest** to make real HTTP requests against the Express app.
+Integration tests validate the full HTTP request/response cycle through Express routes, middleware (authentication, authorization, validation), controllers, and services. They use **Supertest** to make real HTTP requests against the Express app. The `RXNORM_API_BASE_URL` is set to `mock` in the test environment so that drug validation uses the built-in mock database.
 
 **Run all integration tests:**
 
@@ -2138,6 +2603,19 @@ npm test
 | `PATCH /api/requests/:id/status` | 5 | Valid transition (200), invalid transition (400), patient blocked (403), staff scope guard, invalid status |
 | `DELETE /api/requests/:id` | 6 | Patient cancellation (200), staff cancellation (200), admin cancellation (200), ownership guard, fulfilled guard, cancelled guard |
 
+**Inventory API Integration Tests (50 tests across 8 describe blocks):**
+
+| Endpoint | Tests | Key Scenarios |
+| -------- | ----- | ------------- |
+| `POST /api/inventory` | 12 | Successful creation with staff token (201), admin creation (201), auth required (401), Patient role blocked (403), missing required fields (400), missing pharmacyId (400), invalid pharmacyId format (400), negative quantity (400), negative unit price (400), unrecognized medication name (400), duplicate in same pharmacy (409), invalid category enum (400), invalid form enum (400) |
+| `GET /api/inventory` | 6 | Authenticated retrieval (200), auth required (401), filter by category, filter by pharmacyId, search by medication name, pagination |
+| `GET /api/inventory/low-stock` | 3 | Low-stock items (200), filter by pharmacyId, auth required (401) |
+| `GET /api/inventory/expiring` | 4 | Expiring items sorted by date (200), custom days parameter, filter by pharmacyId, auth required (401) |
+| `GET /api/inventory/:id` | 4 | Successful retrieval (200), not found (404), invalid ID format (400), auth required (401) |
+| `PUT /api/inventory/:id` | 8 | Staff update (200), admin update (200), Patient blocked (403), auth required (401), empty body (400), not found (404), invalid ID format (400), negative quantity (400) |
+| `DELETE /api/inventory/:id` | 7 | Staff delete (200), admin delete (200), Patient blocked (403), auth required (401), not found (404), invalid ID format (400), verify item removed from DB |
+| Response Format | 2 | Standard success format validation, standard error format validation |
+
 ---
 
 #### Pharmacy Management Integration Tests
@@ -2181,6 +2659,7 @@ export PERF_REQUEST_ID="<valid request _id>"
 export PERF_PENDING_REQUEST_ID="<valid pending request _id>"
 export PERF_USER_ID="<valid user _id>"
 export PERF_PHARMACY_ID="<valid pharmacy _id>"
+export PERF_INVENTORY_ID="<valid inventory item _id>"
 ```
 
 #### Run Performance Tests
@@ -2197,11 +2676,18 @@ npm run test:perf
 npm run test:perf:requests
 ```
 
+**Inventory Performance Tests:**
+
+```bash
+npm run test:perf:inventory
+```
+
 Or directly with Artillery:
 
 ```bash
 artillery run src/__tests__/performance/order.perf.yml
 artillery run src/__tests__/performance/request.perf.yml
+artillery run src/__tests__/performance/inventory.perf.yml
 ```
 
 #### Load Test Phases
@@ -2237,6 +2723,16 @@ artillery run src/__tests__/performance/request.perf.yml
 #### Pharmacy Management Performance Tests
 
 There is currently **no standalone Artillery performance suite** targeting the pharmacy management endpoints. When needed, you can create new performance specs (for example, `pharmacy.perf.yml`) alongside the existing order/request configs to simulate public search traffic (`GET /api/pharmacies`, `/api/pharmacies/nearby`) and review activity (`GET`/`POST /api/pharmacies/:id/reviews`) under load, using the same seeding and environment patterns described above.
+
+**Inventory Performance Test Scenarios:**
+
+| Scenario | Weight | Method | Endpoint | Auth |
+| -------- | ------ | ------ | -------- | ---- |
+| Get all inventory items | 30% | GET | `/api/inventory?page=1&limit=10` | Staff |
+| Get inventory item by ID | 25% | GET | `/api/inventory/:id` | Staff |
+| Get low-stock items | 20% | GET | `/api/inventory/low-stock` | Staff |
+| Get expiring items | 15% | GET | `/api/inventory/expiring?days=30` | Staff |
+| Search inventory | 10% | GET | `/api/inventory?search=Perf&page=1&limit=10` | Staff |
 
 #### Performance Thresholds
 
