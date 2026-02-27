@@ -89,6 +89,21 @@ async function seed() {
   });
   const requestId = requestResult.insertedId;
 
+  // Create additional request for testing various endpoints
+  const pendingRequestResult = await db.collection('requests').insertOne({
+    userId: patientId,
+    pharmacyId,
+    medicationName: 'Perf Test Pending Medication',
+    quantity: 1,
+    urgencyLevel: 'urgent',
+    status: 'pending',
+    prescriptionRequired: false,
+    requestDate: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+  const pendingRequestId = pendingRequestResult.insertedId;
+
   // Create order
   const orderResult = await db.collection('orders').insertOne({
     orderNumber: `ORD-PERF-${Date.now()}`,
@@ -145,13 +160,16 @@ async function seed() {
   console.log(`export PERF_PATIENT_TOKEN="${patientToken}"`);
   console.log(`export PERF_STAFF_TOKEN="${staffToken}"`);
   console.log(`export PERF_ORDER_ID="${orderId}"`);
+  console.log(`export PERF_REQUEST_ID="${requestId}"`);
+  console.log(`export PERF_PENDING_REQUEST_ID="${pendingRequestId}"`);
   console.log(`export PERF_USER_ID="${patientId}"`);
   console.log(`export PERF_PHARMACY_ID="${pharmacyId}"`);
   console.log('============================================================\n');
 
   await mongoose.disconnect();
-  console.log('Seed data created successfully. Export the variables above, then run:');
-  console.log('  npx artillery run src/__tests__/performance/order.perf.yml\n');
+  console.log('Seed data created successfully. Export variables above, then run:');
+  console.log('  npx artillery run src/__tests__/performance/order.perf.yml');
+  console.log('  npx artillery run src/__tests__/performance/request.perf.yml\n');
 }
 
 seed().catch((err) => {

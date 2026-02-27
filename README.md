@@ -21,6 +21,16 @@
     - [Generate Invoice](#11-generate-invoice)
     - [Assign Delivery Partner](#12-assign-delivery-partner)
     - [Cancel Order](#13-cancel-order)
+- [Request Medication Endpoints](#request-medication-endpoints)
+    - [Create Medication Request](#1-create-medication-request)
+    - [Get All Requests](#2-get-all-requests)
+    - [Get Urgent Requests](#3-get-urgent-requests)
+    - [Get User Requests](#4-get-user-requests)
+    - [Get Pharmacy Requests](#5-get-pharmacy-requests)
+    - [Get Request by ID](#6-get-request-by-id)
+    - [Update Request](#7-update-request)
+    - [Update Request Status](#8-update-request-status)
+    - [Cancel Request](#9-cancel-request)
 - [Testing Instruction Report](#testing-instruction-report)
   - [Testing Environment Configuration](#testing-environment-configuration)
   - [Running Unit Tests](#running-unit-tests)
@@ -825,6 +835,511 @@ Cancels an order, restores inventory quantities, reverts the medication request 
 
 ---
 
+### Request Medication Endpoints
+
+Base URL: `/api/requests`
+
+---
+
+#### 1. Create Medication Request
+
+Creates a new medication request submitted by a patient. Triggers notification to the patient upon successful creation.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `POST /api/requests` |
+| **Auth** | Required |
+| **Role** | `Patient` |
+
+**Request Body:**
+
+```json
+{
+  "pharmacyId": "60d5ec49f1b2c72b1c8d1234",
+  "medicationName": "Amoxicillin 500mg",
+  "quantity": 30,
+  "urgencyLevel": "normal",
+  "prescriptionRequired": false,
+  "prescriptionImage": "https://example.com/prescription.jpg",
+  "notes": "Need this medication urgently",
+  "estimatedAvailability": "2026-03-05T10:00:00.000Z"
+}
+```
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `pharmacyId` | string (ObjectId) | Yes | Target pharmacy ID |
+| `medicationName` | string | Yes | Name of medication requested |
+| `quantity` | integer | Yes | Quantity needed (min: 1) |
+| `urgencyLevel` | string | No | `urgent`, `normal`, or `low` (default: `normal`) |
+| `prescriptionRequired` | boolean | No | Whether prescription is required (default: `false`) |
+| `prescriptionImage` | string | No | URL to prescription image |
+| `notes` | string | No | Additional notes (max: 1000 chars) |
+| `estimatedAvailability` | string | No | Desired availability date (ISO 8601) |
+
+**Success Response (201):**
+
+```json
+{
+  "success": true,
+  "message": "Medication request created successfully",
+  "data": {
+    "_id": "60d5ec49f1b2c72b1c8d4567",
+    "userId": {
+      "_id": "60d5ec49f1b2c72b1c8d1234",
+      "name": "Test Patient",
+      "email": "patient@test.com",
+      "phone": "+94771234567"
+    },
+    "pharmacyId": {
+      "_id": "60d5ec49f1b2c72b1c8d1235",
+      "name": "City Pharmacy",
+      "location": "Colombo",
+      "contactInfo": "+94112345678"
+    },
+    "medicationName": "Amoxicillin 500mg",
+    "quantity": 30,
+    "urgencyLevel": "normal",
+    "status": "pending",
+    "prescriptionRequired": false,
+    "notes": "Need this medication urgently",
+    "requestDate": "2026-02-27T10:00:00.000Z",
+    "createdAt": "2026-02-27T10:00:00.000Z",
+    "updatedAt": "2026-02-27T10:00:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 400 | Missing/invalid fields, invalid ObjectId format |
+| 401 | Missing or invalid auth token |
+| 403 | Non-Patient role attempts to create request |
+
+---
+
+#### 2. Get All Requests
+
+Returns a paginated, filterable list of all medication requests. Accessible to pharmacy staff and system admins.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `GET /api/requests` |
+| **Auth** | Required |
+| **Role** | `Pharmacy Staff`, `System Admin` |
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+| --------- | ---- | ------- | ----------- |
+| `status` | string | — | Filter: `pending`, `processing`, `available`, `unavailable`, `fulfilled`, `cancelled` |
+| `urgencyLevel` | string | — | Filter: `urgent`, `normal`, `low` |
+| `dateFrom` | string | — | Filter requests from this date (ISO 8601) |
+| `dateTo` | string | — | Filter requests until this date (ISO 8601) |
+| `page` | integer | 1 | Page number |
+| `limit` | integer | 20 | Items per page |
+| `sortBy` | string | `createdAt` | Sort field: `createdAt`, `urgencyLevel`, `requestDate`, `status` |
+| `sortOrder` | string | `desc` | `asc` or `desc` |
+
+**Example Request:**
+
+```
+GET /api/requests?status=pending&urgencyLevel=urgent&page=1&limit=10
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Requests retrieved successfully",
+  "data": {
+    "requests": [
+      {
+        "_id": "60d5ec49f1b2c72b1c8d4567",
+        "userId": { "name": "Test Patient", "email": "patient@test.com" },
+        "pharmacyId": { "name": "City Pharmacy", "location": "Colombo" },
+        "medicationName": "Amoxicillin 500mg",
+        "quantity": 30,
+        "urgencyLevel": "urgent",
+        "status": "pending",
+        "requestDate": "2026-02-27T10:00:00.000Z"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "pages": 1
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 401 | Missing or invalid auth token |
+| 403 | Patient role attempts to access |
+
+---
+
+#### 3. Get Urgent Requests
+
+Returns all requests with urgency level set to `urgent`. Prioritizes critical medication needs.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `GET /api/requests/urgent` |
+| **Auth** | Required |
+| **Role** | `Pharmacy Staff`, `System Admin` |
+
+**Query Parameters:** Same pagination params as [Get All Requests](#2-get-all-requests).
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Urgent requests retrieved successfully",
+  "data": {
+    "requests": [ "...urgent request objects..." ],
+    "total": 5,
+    "page": 1,
+    "pages": 1
+  }
+}
+```
+
+---
+
+#### 4. Get User Requests
+
+Returns all medication requests for a specific user. Patients can only access their own requests.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `GET /api/requests/user/:userId` |
+| **Auth** | Required |
+| **Role** | `Patient`, `System Admin` |
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `userId` | string (ObjectId) | User ID |
+
+**Query Parameters:** Same pagination and filter params as [Get All Requests](#2-get-all-requests).
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "User requests retrieved successfully",
+  "data": {
+    "requests": [ "...user request objects..." ],
+    "total": 3,
+    "page": 1,
+    "pages": 1
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 400 | Invalid userId format |
+| 401 | Missing or invalid auth token |
+| 403 | Patient tries to access another user's requests |
+
+---
+
+#### 5. Get Pharmacy Requests
+
+Returns all medication requests assigned to a specific pharmacy. Pharmacy staff can only view their own pharmacy's requests.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `GET /api/requests/pharmacy/:pharmacyId` |
+| **Auth** | Required |
+| **Role** | `Pharmacy Staff`, `System Admin` |
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `pharmacyId` | string (ObjectId) | Pharmacy ID |
+
+**Query Parameters:** Same pagination and filter params as [Get All Requests](#2-get-all-requests).
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Pharmacy requests retrieved successfully",
+  "data": {
+    "requests": [ "...pharmacy request objects..." ],
+    "total": 8,
+    "page": 1,
+    "pages": 1
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 400 | Invalid pharmacyId format |
+| 401 | Missing or invalid auth token |
+| 403 | Staff tries to access other pharmacy's requests |
+
+---
+
+#### 6. Get Request by ID
+
+Returns a single medication request with full details including user and pharmacy information.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `GET /api/requests/:id` |
+| **Auth** | Required |
+| **Role** | Any authenticated user |
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `id` | string (ObjectId) | Request ID |
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Request retrieved successfully",
+  "data": {
+    "_id": "60d5ec49f1b2c72b1c8d4567",
+    "userId": {
+      "_id": "60d5ec49f1b2c72b1c8d1234",
+      "name": "Test Patient",
+      "email": "patient@test.com",
+      "phone": "+94771234567"
+    },
+    "pharmacyId": {
+      "_id": "60d5ec49f1b2c72b1c8d1235",
+      "name": "City Pharmacy",
+      "location": "Colombo",
+      "contactInfo": "+94112345678"
+    },
+    "medicationName": "Amoxicillin 500mg",
+    "quantity": 30,
+    "urgencyLevel": "normal",
+    "status": "pending",
+    "prescriptionRequired": false,
+    "notes": "Need this medication urgently",
+    "requestDate": "2026-02-27T10:00:00.000Z",
+    "responseDate": null,
+    "estimatedAvailability": null,
+    "createdAt": "2026-02-27T10:00:00.000Z",
+    "updatedAt": "2026-02-27T10:00:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 400 | Invalid ObjectId format |
+| 401 | Missing or invalid auth token |
+| 403 | Patient tries to access another user's request |
+| 404 | Request not found |
+
+---
+
+#### 7. Update Request
+
+Updates editable fields of a pending request. Only the owning patient can update their own requests.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `PUT /api/requests/:id` |
+| **Auth** | Required |
+| **Role** | `Patient` |
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `id` | string (ObjectId) | Request ID |
+
+**Request Body (all fields optional):**
+
+```json
+{
+  "quantity": 45,
+  "urgencyLevel": "urgent",
+  "notes": "Updated quantity needed",
+  "prescriptionImage": "https://example.com/new-prescription.jpg"
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `quantity` | integer | New quantity (min: 1) |
+| `urgencyLevel` | string | New urgency: `urgent`, `normal`, or `low` |
+| `notes` | string | Updated notes (max: 1000 chars) |
+| `prescriptionImage` | string | New prescription image URL |
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Request updated successfully",
+  "data": {
+    "...updated request object...",
+    "quantity": 45,
+    "urgencyLevel": "urgent",
+    "notes": "Updated quantity needed"
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 400 | Request is not in `pending` status, invalid data |
+| 401 | Missing or invalid auth token |
+| 403 | Non-owner tries to update, or non-patient role |
+| 404 | Request not found |
+
+---
+
+#### 8. Update Request Status
+
+Updates the status of a medication request. Only pharmacy staff and system admins can change request status. Enforces valid status transitions and triggers patient notifications.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `PATCH /api/requests/:id/status` |
+| **Auth** | Required |
+| **Role** | `Pharmacy Staff`, `System Admin` |
+
+**Valid Status Transitions:**
+
+```
+pending → processing → available → fulfilled
+    ↓         ↓           ↓
+unavailable  unavailable  cancelled
+    ↓
+cancelled
+```
+
+**Request Body:**
+
+```json
+{
+  "status": "processing",
+  "responseDate": "2026-02-27T11:00:00.000Z",
+  "estimatedAvailability": "2026-03-01T14:00:00.000Z",
+  "notes": "Processing your request. Expected availability: March 1st"
+}
+```
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `status` | string | Yes | Target status from valid transitions |
+| `responseDate` | string | No | Response timestamp (ISO 8601) |
+| `estimatedAvailability` | string | No | Estimated availability date (ISO 8601) |
+| `notes` | string | No | Status update notes |
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Request status updated successfully",
+  "data": {
+    "...updated request object...",
+    "status": "processing",
+    "responseDate": "2026-02-27T11:00:00.000Z",
+    "estimatedAvailability": "2026-03-01T14:00:00.000Z",
+    "notes": "Processing your request. Expected availability: March 1st"
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 400 | Invalid status transition, invalid status value |
+| 401 | Missing or invalid auth token |
+| 403 | Patient role attempts to update, staff tries to update other pharmacy's request |
+| 404 | Request not found |
+
+---
+
+#### 9. Cancel Request
+
+Cancels a medication request. Patients can cancel their own requests; pharmacy staff and admins can cancel any request. Cannot cancel fulfilled or already-cancelled requests.
+
+| Property | Value |
+| -------- | ----- |
+| **URL** | `DELETE /api/requests/:id` |
+| **Auth** | Required |
+| **Role** | `Patient`, `Pharmacy Staff`, `System Admin` |
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `id` | string (ObjectId) | Request ID |
+
+**Request Body (optional):**
+
+```json
+{
+  "reason": "No longer needed"
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `reason` | string | Cancellation reason (stored in notes) |
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Request cancelled successfully",
+  "data": {
+    "...updated request object...",
+    "status": "cancelled",
+    "responseDate": "2026-02-27T12:00:00.000Z",
+    "notes": "No longer needed"
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+| ------ | --------- |
+| 400 | Request already fulfilled or cancelled |
+| 401 | Missing or invalid auth token |
+| 403 | Patient tries to cancel another user's request |
+| 404 | Request not found |
+
+---
+
 ## Testing Instruction Report
 
 ### Testing Environment Configuration
@@ -881,10 +1396,13 @@ The project uses **Jest** with **ts-jest** for TypeScript support. Configuration
 | `detectOpenHandles` | `true` | Warn about open handles preventing exit |
 | `verbose` | `true` | Detailed test output |
 
-**Coverage collection** is configured for the Order module files:
+**Coverage collection** is configured for both Order and Request Medication module files:
 - `src/services/order.service.ts`
 - `src/controllers/order.controller.ts`
 - `src/routes/order.routes.ts`
+- `src/services/request.service.ts`
+- `src/controllers/request.controller.ts`
+- `src/routes/request.routes.ts`
 
 #### Test Directory Structure
 
@@ -896,19 +1414,24 @@ backend/src/__tests__/
 │   ├── db.helper.ts           # MongoDB Memory Server connect/disconnect/clear
 │   └── test-data.helper.ts    # Factory functions for test data
 ├── integration/
-│   └── order.api.test.ts      # API-level integration tests (48 tests)
+│   ├── order.api.test.ts      # API-level integration tests (48 tests)
+│   └── request.api.test.ts   # Request API integration tests (47 tests)
 ├── unit/
-│   └── order.service.test.ts  # Service-level unit tests (44 tests)
+│   ├── order.service.test.ts  # Service-level unit tests (44 tests)
+│   └── request.service.test.ts # Request service unit tests (52 tests)
 └── performance/
     ├── order.perf.yml         # Artillery load test configuration
-    └── order.perf.processor.js # Artillery processor with auth setup
+    ├── order.perf.processor.js # Artillery processor with auth setup
+    ├── request.perf.yml       # Request medication load test configuration
+    ├── request.perf.processor.js # Request medication test processor
+    └── seed-perf-data.js      # Performance test data seeding script
 ```
 
 ---
 
 ### Running Unit Tests
 
-Unit tests validate the `OrderService` business logic in isolation against a real (in-memory) MongoDB instance. They cover all service methods including order creation, status transitions, payment processing, cancellation with refunds, and pagination.
+Unit tests validate the business logic of both `OrderService` and `RequestService` in isolation against a real (in-memory) MongoDB instance. They cover all service methods including request creation, status transitions, updates, cancellations, pagination, and order lifecycle management.
 
 **Run all unit tests:**
 
@@ -924,7 +1447,9 @@ npm run test:coverage
 
 The coverage report will be generated in the `backend/coverage/` directory in text, lcov, and clover formats.
 
-**What the unit tests cover (44 tests across 11 describe blocks):**
+**What the unit tests cover:**
+
+**OrderService (44 tests across 11 describe blocks):**
 
 | Service Method | Tests | Key Scenarios |
 | -------------- | ----- | ------------- |
@@ -941,6 +1466,20 @@ The coverage report will be generated in the `backend/coverage/` directory in te
 | `getDeliveryTracking` | 2 | Tracking retrieval, not found |
 | `generateInvoice` | 2 | Invoice URL generation, not found |
 | `getDeliveryPartnerOrders` | 2 | Partner-specific results, empty results |
+
+**RequestService (52 tests across 9 describe blocks):**
+
+| Service Method | Tests | Key Scenarios |
+| -------------- | ----- | ------------- |
+| `createRequest` | 3 | Successful creation, default urgency level, estimated availability handling |
+| `getRequests` | 5 | Pagination, status filter, urgency filter, date range filter, empty results |
+| `getRequestById` | 2 | Successful retrieval, not found error |
+| `getRequestsByUser` | 2 | User-specific results, empty results |
+| `getRequestsByPharmacy` | 2 | Pharmacy-specific results, empty results |
+| `getUrgentRequests` | 1 | Urgent requests filtering |
+| `updateRequest` | 4 | Successful update, non-pending guard, ownership guard, not found |
+| `updateRequestStatus` | 4 | Valid transition, invalid transition, pharmacy scope guard, response date handling |
+| `cancelRequest` | 6 | Patient cancellation, staff/admin cancellation, ownership guard, fulfilled/cancelled guards, not found |
 
 ---
 
@@ -986,6 +1525,20 @@ npm test
 | Unknown Routes | 2 | Non-existent routes (400/404), wrong HTTP method (404) |
 | Response Format | 2 | Standard success format validation, standard error format validation |
 
+**Request API Integration Tests (47 tests across 9 describe blocks):**
+
+| Endpoint | Tests | Key Scenarios |
+| -------- | ----- | ------------- |
+| `POST /api/requests` | 7 | Successful creation (201), auth required (401), role guard (403), validation (400), optional fields, invalid urgency, invalid quantity |
+| `GET /api/requests` | 6 | Staff access (200), admin access (200), patient blocked (403), status filter, urgency filter, pagination |
+| `GET /api/requests/urgent` | 2 | Staff access (200), patient blocked (403) |
+| `GET /api/requests/user/:userId` | 3 | User access (200), admin access (200), patient blocked from other user (403) |
+| `GET /api/requests/pharmacy/:pharmacyId` | 3 | Staff access (200), admin access (200), staff blocked from other pharmacy (403) |
+| `GET /api/requests/:id` | 4 | Successful retrieval (200), not found (404), invalid ID (400), auth required (401) |
+| `PUT /api/requests/:id` | 4 | Successful update (200), non-owner blocked (403), non-pending blocked (400), validation (400) |
+| `PATCH /api/requests/:id/status` | 5 | Valid transition (200), invalid transition (400), patient blocked (403), staff scope guard, invalid status |
+| `DELETE /api/requests/:id` | 6 | Patient cancellation (200), staff cancellation (200), admin cancellation (200), ownership guard, fulfilled guard, cancelled guard |
+
 ---
 
 ### Performance Testing Setup and Execution
@@ -1012,26 +1565,38 @@ npm run dev
 npm run test:perf:seed
 ```
 
-4. Set the required environment variables with valid tokens and IDs from your seeded data:
+4. Set required environment variables with valid tokens and IDs from your seeded data:
 
 ```bash
 export PERF_PATIENT_TOKEN="<JWT token for a Patient user>"
 export PERF_STAFF_TOKEN="<JWT token for a Pharmacy Staff user>"
+export PERF_ADMIN_TOKEN="<JWT token for a System Admin user>"
 export PERF_ORDER_ID="<valid order _id>"
+export PERF_REQUEST_ID="<valid request _id>"
+export PERF_PENDING_REQUEST_ID="<valid pending request _id>"
 export PERF_USER_ID="<valid user _id>"
 export PERF_PHARMACY_ID="<valid pharmacy _id>"
 ```
 
 #### Run Performance Tests
 
+**Order Performance Tests:**
+
 ```bash
 npm run test:perf
+```
+
+**Request Medication Performance Tests:**
+
+```bash
+npm run test:perf:requests
 ```
 
 Or directly with Artillery:
 
 ```bash
 artillery run src/__tests__/performance/order.perf.yml
+artillery run src/__tests__/performance/request.perf.yml
 ```
 
 #### Load Test Phases
@@ -1051,6 +1616,18 @@ artillery run src/__tests__/performance/order.perf.yml
 | Get delivery tracking | 20% | GET | `/api/orders/track/:id` | Patient |
 | Get user orders | 15% | GET | `/api/orders/user/:userId` | Patient |
 | Get pharmacy orders | 10% | GET | `/api/orders/pharmacy/:pharmacyId` | Staff |
+
+**Request Medication Performance Test Scenarios:**
+
+| Scenario | Weight | Method | Endpoint | Auth |
+| -------- | ------ | ------ | -------- | ---- |
+| Get all requests | 25% | GET | `/api/requests?page=1&limit=10` | Staff |
+| Get request by ID | 20% | GET | `/api/requests/:id` | Patient |
+| Get user requests | 15% | GET | `/api/requests/user/:userId?page=1&limit=10` | Patient |
+| Get pharmacy requests | 15% | GET | `/api/requests/pharmacy/:pharmacyId?page=1&limit=10` | Staff |
+| Get urgent requests | 10% | GET | `/api/requests/urgent?page=1&limit=10` | Staff |
+| Create new request | 10% | POST | `/api/requests` | Patient |
+| Update request status | 5% | PATCH | `/api/requests/:id/status` | Staff |
 
 #### Performance Thresholds
 
