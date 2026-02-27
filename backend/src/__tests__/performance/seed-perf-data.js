@@ -104,6 +104,38 @@ async function seed() {
   });
   const pendingRequestId = pendingRequestResult.insertedId;
 
+  // Create additional inventory items for performance testing
+  // Low stock item
+  await db.collection('inventories').insertOne({
+    pharmacyId,
+    medicationName: 'Perf Low Stock Medication',
+    category: 'prescription',
+    quantity: 3,
+    unitPrice: 15.99,
+    requiresPrescription: true,
+    lowStockThreshold: 20,
+    manufacturer: 'PerfTest Labs',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  // Near-expiry item
+  const nearExpiry = new Date();
+  nearExpiry.setDate(nearExpiry.getDate() + 15);
+  await db.collection('inventories').insertOne({
+    pharmacyId,
+    medicationName: 'Perf Expiring Medication',
+    category: 'otc',
+    quantity: 50,
+    unitPrice: 8.50,
+    requiresPrescription: false,
+    lowStockThreshold: 10,
+    expiryDate: nearExpiry,
+    manufacturer: 'PerfTest Labs',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
   // Create order
   const orderResult = await db.collection('orders').insertOne({
     orderNumber: `ORD-PERF-${Date.now()}`,
@@ -164,6 +196,7 @@ async function seed() {
   console.log(`export PERF_PENDING_REQUEST_ID="${pendingRequestId}"`);
   console.log(`export PERF_USER_ID="${patientId}"`);
   console.log(`export PERF_PHARMACY_ID="${pharmacyId}"`);
+  console.log(`export PERF_INVENTORY_ID="${inventoryId}"`);
   console.log('============================================================\n');
 
   await mongoose.disconnect();
