@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 export enum UserRole {
   PATIENT = 'Patient',
   PHARMACY_STAFF = 'Pharmacy Staff',
+  DELIVERY_PARTNER = 'Delivery Partner',
   SYSTEM_ADMIN = 'System Admin',
 }
 

@@ -71,6 +71,15 @@ export class OrderController {
     }
   }
 
+  static async deleteOrder(req: Request, res: Response, next: NextFunction) {
+    try {
+      await OrderService.deleteOrder(String(req.params.id));
+      ApiResponse.success(res, null, 'Order deleted successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async cancelOrder(req: Request, res: Response, next: NextFunction) {
     try {
       if (!req.user) throw ApiError.unauthorized();

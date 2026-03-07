@@ -471,6 +471,25 @@ export class OrderService {
     return order;
   }
 
+  /**
+   * Permanently delete an order. Only cancelled orders can be deleted.
+   */
+  static async deleteOrder(orderId: string): Promise<void> {
+    const order = await Order.findById(orderId);
+    if (!order) {
+      throw ApiError.notFound('Order not found');
+    }
+
+    if (order.status !== OrderStatus.CANCELLED) {
+      throw ApiError.badRequest(
+        'Only cancelled orders can be deleted. Cancel the order first.'
+      );
+    }
+
+    await Order.findByIdAndDelete(orderId);
+    logger.info(`Order ${order.orderNumber} deleted permanently`);
+  }
+
   static async getDeliveryPartnerOrders(
     partnerId: string,
     pagination: PaginationOptions
