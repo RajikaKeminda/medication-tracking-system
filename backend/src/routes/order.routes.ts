@@ -435,6 +435,36 @@ router.put(
 
 /**
  * @swagger
+ * /orders/{id}:
+ *   delete:
+ *     summary: Permanently delete a cancelled order
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Order deleted successfully
+ *       400:
+ *         description: Only cancelled orders can be deleted
+ *       404:
+ *         description: Order not found
+ */
+router.delete(
+  '/:id',
+  authenticate,
+  authorize(UserRole.PHARMACY_STAFF, UserRole.SYSTEM_ADMIN),
+  validate(orderIdParamSchema),
+  OrderController.deleteOrder
+);
+
+/**
+ * @swagger
  * /orders/{id}/status:
  *   patch:
  *     summary: Update order status
