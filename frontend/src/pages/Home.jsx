@@ -77,8 +77,14 @@ export function Home() {
               ) : null}
             </p>
             <p className="mt-4 text-sm leading-relaxed text-slate-500 dark:text-slate-500">
-              You&apos;re authenticated. Connect requests, orders, and inventory modules here as
-              you build them out.
+              Open{' '}
+              <Link
+                to="/orders"
+                className="font-medium text-emerald-700 underline decoration-emerald-500/40 underline-offset-2 hover:text-emerald-600 dark:text-emerald-400"
+              >
+                Orders
+              </Link>{' '}
+              to track deliveries, pay, and manage fulfillment by role.
             </p>
           </section>
         ) : (
