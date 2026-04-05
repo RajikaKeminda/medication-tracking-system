@@ -29,6 +29,14 @@ export function Layout() {
             <NavLink to="/" end className={({ isActive }) => (isActive ? navActive : navInactive)}>
               Home
             </NavLink>
+            {isAuthenticated ? (
+              <NavLink
+                to="/orders"
+                className={({ isActive }) => (isActive ? navActive : navInactive)}
+              >
+                Orders
+              </NavLink>
+            ) : null}
             {!isAuthenticated ? (
               <>
                 <NavLink
