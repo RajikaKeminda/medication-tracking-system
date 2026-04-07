@@ -7,6 +7,9 @@ import { Signup } from './pages/Signup'
 import { OrdersPage } from './pages/OrdersPage'
 import { OrderDetailPage } from './pages/OrderDetailPage'
 import { CreateOrderPage } from './pages/CreateOrderPage'
+import { InventoryPage } from './pages/InventoryPage'
+import { InventoryDetailPage } from './pages/InventoryDetailPage'
+import { InventoryFormPage } from './pages/InventoryFormPage'
 
 export default function App() {
   return (
@@ -36,6 +39,38 @@ export default function App() {
           element={
             <ProtectedRoute>
               <OrderDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory"
+          element={
+            <ProtectedRoute>
+              <InventoryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/new"
+          element={
+            <ProtectedRoute>
+              <InventoryFormPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/:id"
+          element={
+            <ProtectedRoute>
+              <InventoryDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/:id/edit"
+          element={
+            <ProtectedRoute>
+              <InventoryFormPage />
             </ProtectedRoute>
           }
         />

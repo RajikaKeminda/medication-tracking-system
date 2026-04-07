@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
+import { ROLES } from '../constants/roles'
 
 const navInactive =
   'rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'
@@ -8,6 +9,9 @@ const navActive =
 
 export function Layout() {
   const { user, logout, isAuthenticated } = useAuth()
+  const showInventory =
+    isAuthenticated &&
+    (user?.role === ROLES.PHARMACY_STAFF || user?.role === ROLES.SYSTEM_ADMIN)
 
   return (
     <div className="flex min-h-svh flex-col bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -35,6 +39,14 @@ export function Layout() {
                 className={({ isActive }) => (isActive ? navActive : navInactive)}
               >
                 Orders
+              </NavLink>
+            ) : null}
+            {showInventory ? (
+              <NavLink
+                to="/inventory"
+                className={({ isActive }) => (isActive ? navActive : navInactive)}
+              >
+                Inventory
               </NavLink>
             ) : null}
             {!isAuthenticated ? (
