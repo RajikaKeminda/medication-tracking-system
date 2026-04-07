@@ -17,6 +17,9 @@ function showRequestsNav(role) {
 
 export function Layout() {
   const { user, logout, isAuthenticated } = useAuth()
+  const showInventory =
+    isAuthenticated &&
+    (user?.role === ROLES.PHARMACY_STAFF || user?.role === ROLES.SYSTEM_ADMIN)
 
   return (
     <div className="flex min-h-svh flex-col bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -46,6 +49,12 @@ export function Layout() {
                 Orders
               </NavLink>
             ) : null}
+            {showInventory ? (
+              <NavLink
+                to="/inventory"
+                className={({ isActive }) => (isActive ? navActive : navInactive)}
+              >
+                Inventory
             {isAuthenticated && showRequestsNav(user?.role) ? (
               <NavLink
                 to="/requests"
