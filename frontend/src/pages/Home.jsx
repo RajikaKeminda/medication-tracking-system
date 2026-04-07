@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
+import { ROLES } from '../constants/roles'
 
 function CheckIcon(props) {
   return (
@@ -77,14 +78,26 @@ export function Home() {
               ) : null}
             </p>
             <p className="mt-4 text-sm leading-relaxed text-slate-500 dark:text-slate-500">
-              Open{' '}
+              {(user?.role === ROLES.PATIENT ||
+                user?.role === ROLES.PHARMACY_STAFF ||
+                user?.role === ROLES.SYSTEM_ADMIN) && (
+                <>
+                  <Link
+                    to="/requests"
+                    className="font-medium text-emerald-700 underline decoration-emerald-500/40 underline-offset-2 hover:text-emerald-600 dark:text-emerald-400"
+                  >
+                    Medication requests
+                  </Link>
+                  {' · '}
+                </>
+              )}
               <Link
                 to="/orders"
                 className="font-medium text-emerald-700 underline decoration-emerald-500/40 underline-offset-2 hover:text-emerald-600 dark:text-emerald-400"
               >
                 Orders
               </Link>{' '}
-              to track deliveries, pay, and manage fulfillment by role.
+              for deliveries, payment, and fulfillment by role.
             </p>
           </section>
         ) : (

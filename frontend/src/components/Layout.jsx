@@ -1,10 +1,19 @@
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
+import { ROLES } from '../constants/roles'
 
 const navInactive =
   'rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'
 const navActive =
   'rounded-lg px-3 py-2 text-sm font-semibold bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200/80 dark:bg-emerald-950/60 dark:text-emerald-200 dark:ring-emerald-800/80'
+
+function showRequestsNav(role) {
+  return (
+    role === ROLES.PATIENT ||
+    role === ROLES.PHARMACY_STAFF ||
+    role === ROLES.SYSTEM_ADMIN
+  )
+}
 
 export function Layout() {
   const { user, logout, isAuthenticated } = useAuth()
@@ -35,6 +44,14 @@ export function Layout() {
                 className={({ isActive }) => (isActive ? navActive : navInactive)}
               >
                 Orders
+              </NavLink>
+            ) : null}
+            {isAuthenticated && showRequestsNav(user?.role) ? (
+              <NavLink
+                to="/requests"
+                className={({ isActive }) => (isActive ? navActive : navInactive)}
+              >
+                Requests
               </NavLink>
             ) : null}
             {!isAuthenticated ? (
