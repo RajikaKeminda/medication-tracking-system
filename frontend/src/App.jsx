@@ -10,6 +10,9 @@ import { CreateOrderPage } from './pages/CreateOrderPage'
 import { InventoryPage } from './pages/InventoryPage'
 import { InventoryDetailPage } from './pages/InventoryDetailPage'
 import { InventoryFormPage } from './pages/InventoryFormPage'
+import { MedicationRequestsPage } from './pages/MedicationRequestsPage'
+import { CreateMedicationRequestPage } from './pages/CreateMedicationRequestPage'
+import { MedicationRequestDetailPage } from './pages/MedicationRequestDetailPage'
 
 export default function App() {
   return (
@@ -18,6 +21,30 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route
+          path="/requests"
+          element={
+            <ProtectedRoute>
+              <MedicationRequestsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/requests/new"
+          element={
+            <ProtectedRoute>
+              <CreateMedicationRequestPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/requests/:id"
+          element={
+            <ProtectedRoute>
+              <MedicationRequestDetailPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/orders"
           element={

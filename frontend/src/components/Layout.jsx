@@ -7,6 +7,14 @@ const navInactive =
 const navActive =
   'rounded-lg px-3 py-2 text-sm font-semibold bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200/80 dark:bg-emerald-950/60 dark:text-emerald-200 dark:ring-emerald-800/80'
 
+function showRequestsNav(role) {
+  return (
+    role === ROLES.PATIENT ||
+    role === ROLES.PHARMACY_STAFF ||
+    role === ROLES.SYSTEM_ADMIN
+  )
+}
+
 export function Layout() {
   const { user, logout, isAuthenticated } = useAuth()
   const showInventory =
@@ -47,6 +55,12 @@ export function Layout() {
                 className={({ isActive }) => (isActive ? navActive : navInactive)}
               >
                 Inventory
+            {isAuthenticated && showRequestsNav(user?.role) ? (
+              <NavLink
+                to="/requests"
+                className={({ isActive }) => (isActive ? navActive : navInactive)}
+              >
+                Requests
               </NavLink>
             ) : null}
             {!isAuthenticated ? (
