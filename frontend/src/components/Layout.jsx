@@ -55,6 +55,8 @@ export function Layout() {
                 className={({ isActive }) => (isActive ? navActive : navInactive)}
               >
                 Inventory
+              </NavLink>
+            ) : null}
             {isAuthenticated && showRequestsNav(user?.role) ? (
               <NavLink
                 to="/requests"
