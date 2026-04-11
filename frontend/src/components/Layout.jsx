@@ -49,6 +49,12 @@ export function Layout() {
                 Orders
               </NavLink>
             ) : null}
+            <NavLink
+              to="/pharmacies"
+              className={({ isActive }) => (isActive ? navActive : navInactive)}
+            >
+              Pharmacies
+            </NavLink>
             {showInventory ? (
               <NavLink
                 to="/inventory"

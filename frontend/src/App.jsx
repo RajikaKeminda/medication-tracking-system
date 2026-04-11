@@ -13,6 +13,9 @@ import { InventoryFormPage } from './pages/InventoryFormPage'
 import { MedicationRequestsPage } from './pages/MedicationRequestsPage'
 import { CreateMedicationRequestPage } from './pages/CreateMedicationRequestPage'
 import { MedicationRequestDetailPage } from './pages/MedicationRequestDetailPage'
+import { PharmaciesPage } from './pages/PharmaciesPage'
+import { PharmacyDetailPage } from './pages/PharmacyDetailPage'
+import { PharmacyFormPage } from './pages/PharmacyFormPage'
 
 export default function App() {
   return (
@@ -21,6 +24,30 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route
+          path="/pharmacies"
+          element={<PharmaciesPage />}
+        />
+        <Route
+          path="/pharmacies/:id"
+          element={<PharmacyDetailPage />}
+        />
+        <Route
+          path="/pharmacies/new"
+          element={
+            <ProtectedRoute>
+              <PharmacyFormPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/pharmacies/:id/edit"
+          element={
+            <ProtectedRoute>
+              <PharmacyFormPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/requests"
           element={
