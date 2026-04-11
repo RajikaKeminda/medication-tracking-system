@@ -71,26 +71,7 @@ export function Layout() {
                 Requests
               </NavLink>
             ) : null}
-            {!isAuthenticated ? (
-              <>
-                <NavLink
-                  to="/login"
-                  className={({ isActive }) => (isActive ? navActive : navInactive)}
-                >
-                  Log in
-                </NavLink>
-                <NavLink
-                  to="/signup"
-                  className={({ isActive }) =>
-                    isActive
-                      ? `${navActive} sm:shadow-sm`
-                      : `${navInactive} bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 sm:px-4`
-                  }
-                >
-                  Sign up
-                </NavLink>
-              </>
-            ) : (
+            {isAuthenticated ? (
               <>
                 <span
                   className="max-w-[10rem] truncate px-2 text-sm text-slate-600 dark:text-slate-400"
