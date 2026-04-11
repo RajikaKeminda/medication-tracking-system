@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import * as authApi from '../api/auth'
 import { AuthContext } from './authContext'
 
@@ -53,6 +53,12 @@ export function AuthProvider({ children }) {
     },
     [persistSession]
   )
+
+  useEffect(() => {
+    const handler = () => clearSession()
+    window.addEventListener('auth:sessionExpired', handler)
+    return () => window.removeEventListener('auth:sessionExpired', handler)
+  }, [clearSession])
 
   const logout = useCallback(async () => {
     const refreshToken = localStorage.getItem(STORAGE_REFRESH)

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import moment from 'moment'
 import { ApiClientError } from '../api/client'
 import * as inventoryApi from '../api/inventory'
 import { CATEGORIES, FORMS } from '../utils/inventoryUi'
@@ -181,7 +182,7 @@ export function InventoryFormPage() {
       if (!body.form) delete body.form
       if (!body.batchNumber) delete body.batchNumber
       if (!body.expiryDate) delete body.expiryDate
-      else body.expiryDate = new Date(body.expiryDate).toISOString()
+      else body.expiryDate = moment(body.expiryDate, 'YYYY-MM-DD').toISOString()
       if (!body.manufacturer) delete body.manufacturer
       if (!body.storageConditions) delete body.storageConditions
       if (!body.sideEffects?.length) delete body.sideEffects

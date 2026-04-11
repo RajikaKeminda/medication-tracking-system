@@ -1,3 +1,5 @@
+import moment from 'moment'
+
 /** Label maps for select dropdowns & badges */
 export const CATEGORIES = {
   prescription: 'Prescription',
@@ -31,17 +33,14 @@ export function formatMoney(n) {
 
 export function formatDate(iso) {
   if (!iso) return '—'
-  try {
-    return new Date(iso).toLocaleDateString()
-  } catch {
-    return String(iso)
-  }
+  return moment(iso).format('MMM D, YYYY')
 }
 
 export function daysUntil(iso) {
   if (!iso) return Infinity
-  const diff = new Date(iso).getTime() - Date.now()
-  return Math.ceil(diff / (1000 * 60 * 60 * 24))
+  // moment.diff with 'days' truncates toward zero, giving exact day counts
+  // regardless of timezone, browser, or time-of-day.
+  return moment(iso).startOf('day').diff(moment().startOf('day'), 'days')
 }
 
 export function isLowStock(item) {

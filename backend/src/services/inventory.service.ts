@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import moment from 'moment';
 import { Inventory, IInventory } from '../models/inventory.model';
 import { DrugValidationService } from './drug-validation.service';
 import { ApiError } from '../utils/api-error';
@@ -216,9 +217,8 @@ export class InventoryService {
      * @returns Array of expiring inventory items
      */
     static async getExpiring(query: ExpiringQueryInput) {
-        const now = new Date();
-        const futureDate = new Date();
-        futureDate.setDate(now.getDate() + query.days);
+        const now = moment().startOf('day').toDate();
+        const futureDate = moment().startOf('day').add(query.days, 'days').toDate();
 
         const filter: Record<string, unknown> = {
             expiryDate: { $gte: now, $lte: futureDate },
