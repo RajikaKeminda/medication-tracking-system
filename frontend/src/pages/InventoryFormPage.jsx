@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import moment from 'moment'
 import { ApiClientError } from '../api/client'
 import * as inventoryApi from '../api/inventory'
+import { listPharmacies } from '../api/pharmacies'
 import { CATEGORIES, FORMS } from '../utils/inventoryUi'
 
 const cardClass =
@@ -107,6 +108,29 @@ export function InventoryFormPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
+  const [pharmacies, setPharmacies] = useState([])
+  const [pharmaciesLoading, setPharmaciesLoading] = useState(false)
+
+  /* load pharmacies for the dropdown (only when creating) */
+  useEffect(() => {
+    if (isEdit) return
+    let cancelled = false
+    ;(async () => {
+      setPharmaciesLoading(true)
+      try {
+        const data = await listPharmacies({ limit: 200 })
+        if (!cancelled) {
+          /* data may be an array or { pharmacies: [...] } depending on API shape */
+          setPharmacies(Array.isArray(data) ? data : data.pharmacies ?? [])
+        }
+      } catch {
+        /* silently fail – user can still type manually if needed */
+      } finally {
+        if (!cancelled) setPharmaciesLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [isEdit])
 
   /* load existing item for edit */
   const loadItem = useCallback(async () => {
@@ -154,7 +178,7 @@ export function InventoryFormPage() {
   /* client-side validation */
   const validate = () => {
     const errs = {}
-    if (!isEdit && !form.pharmacyId.trim()) errs.pharmacyId = 'Pharmacy ID is required'
+    if (!isEdit && !form.pharmacyId) errs.pharmacyId = 'Please select a pharmacy'
     if (!form.medicationName.trim()) errs.medicationName = 'Medication name is required'
     if (form.quantity === '' || Number(form.quantity) < 0) errs.quantity = 'Valid quantity required'
     if (form.unitPrice === '' || Number(form.unitPrice) < 0) errs.unitPrice = 'Valid price required'
@@ -249,15 +273,24 @@ export function InventoryFormPage() {
             {!isEdit && (
               <div className="sm:col-span-2">
                 <label htmlFor="pharmacyId" className={labelClass}>
-                  Pharmacy ID <span className="text-red-500">*</span>
+                  Pharmacy <span className="text-red-500">*</span>
                 </label>
-                <input
+                <select
                   id="pharmacyId"
-                  className={inputClass}
+                  className={selectClass}
                   value={form.pharmacyId}
                   onChange={set('pharmacyId')}
-                  placeholder="Pharmacy ObjectId"
-                />
+                  disabled={pharmaciesLoading}
+                >
+                  <option value="">
+                    {pharmaciesLoading ? 'Loading pharmacies…' : '— Select a Pharmacy —'}
+                  </option>
+                  {pharmacies.map((p) => (
+                    <option key={p._id} value={p._id}>
+                      {p.name}{p.location ? ` — ${p.location}` : ''}
+                    </option>
+                  ))}
+                </select>
                 {fieldErrors.pharmacyId && (
                   <p className="mt-1 text-xs text-red-600">{fieldErrors.pharmacyId}</p>
                 )}
