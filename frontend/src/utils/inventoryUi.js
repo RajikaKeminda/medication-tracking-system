@@ -1,4 +1,7 @@
-import moment from 'moment'
+/** @param {Date} d */
+function startOfLocalDayMs(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+}
 
 /** Label maps for select dropdowns & badges */
 export const CATEGORIES = {
@@ -33,14 +36,25 @@ export function formatMoney(n) {
 
 export function formatDate(iso) {
   if (!iso) return '—'
-  return moment(iso).format('MMM D, YYYY')
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 export function daysUntil(iso) {
   if (!iso) return Infinity
-  // moment.diff with 'days' truncates toward zero, giving exact day counts
-  // regardless of timezone, browser, or time-of-day.
-  return moment(iso).startOf('day').diff(moment().startOf('day'), 'days')
+  const target = new Date(iso)
+  if (Number.isNaN(target.getTime())) return Infinity
+  const dayMs = 24 * 60 * 60 * 1000
+  return Math.round((startOfLocalDayMs(target) - startOfLocalDayMs(new Date())) / dayMs)
+}
+
+/** HTML date input (YYYY-MM-DD) → ISO string at local midnight */
+export function expiryDateInputToIso(yyyyMmDd) {
+  if (!yyyyMmDd || typeof yyyyMmDd !== 'string') return undefined
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(yyyyMmDd)) return undefined
+  const [y, m, d] = yyyyMmDd.split('-').map(Number)
+  return new Date(y, m - 1, d).toISOString()
 }
 
 export function isLowStock(item) {

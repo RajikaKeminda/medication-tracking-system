@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { OrderService } from '../services/order.service';
 import { ApiResponse } from '../utils/api-response';
 import { ApiError } from '../utils/api-error';
+import { UserRole } from '../models/user.model';
 
 export class OrderController {
   static async createOrder(req: Request, res: Response, next: NextFunction) {
@@ -97,8 +98,14 @@ export class OrderController {
 
   static async getUserOrders(req: Request, res: Response, next: NextFunction) {
     try {
+      if (!req.user) throw ApiError.unauthorized();
+      const targetUserId = String(req.params.userId);
+      if (req.user.role === UserRole.PATIENT && String(req.user._id) !== targetUserId) {
+        throw ApiError.forbidden('You can only view your own orders');
+      }
+
       const { page, limit, sortBy, sortOrder } = req.query;
-      const result = await OrderService.getUserOrders(String(req.params.userId), {
+      const result = await OrderService.getUserOrders(targetUserId, {
         page: parseInt(String(page ?? '1')),
         limit: parseInt(String(limit ?? '10')),
         sortBy: String(sortBy ?? 'createdAt'),

@@ -281,7 +281,7 @@ router.get(
 router.get(
   '/user/:userId',
   authenticate,
-  authorize(UserRole.PATIENT, UserRole.SYSTEM_ADMIN),
+  authorize(UserRole.PATIENT, UserRole.PHARMACY_STAFF, UserRole.SYSTEM_ADMIN),
   validate(userIdParamSchema),
   OrderController.getUserOrders
 );

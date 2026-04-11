@@ -112,7 +112,9 @@ export class RequestController {
                 currentUser.role === UserRole.PATIENT &&
                 String(request.userId) !== String(currentUser._id)
             ) {
-                return next(ApiError.forbidden('Access denied'));
+                return next(
+                    ApiError.forbidden('You can only view medication requests you created.')
+                );
             }
 
             ApiResponse.success(res, request, 'Request retrieved successfully');

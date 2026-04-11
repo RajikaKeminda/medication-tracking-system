@@ -73,7 +73,12 @@ async function retryRequest(path, method, headers, body, rest, newToken) {
 export async function apiRequest(path, options = {}) {
   const { method = 'GET', body, skipAuth = false, headers: extraHeaders, ...rest } =
     options
-  const headers = { 'Content-Type': 'application/json', ...extraHeaders }
+  /** Only set JSON Content-Type when there is a body. GET+application/json triggers CORS preflight
+   *  and breaks public endpoints when the API origin differs from the app (e.g. 127.0.0.1 vs localhost). */
+  const headers = { ...extraHeaders }
+  if (body !== undefined) {
+    headers['Content-Type'] = 'application/json'
+  }
 
   if (!skipAuth) {
     const access = localStorage.getItem('accessToken')

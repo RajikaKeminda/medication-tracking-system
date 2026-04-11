@@ -216,46 +216,7 @@ const router = Router();
  *           type: number
  */
 
-/**
- * @swagger
- * /pharmacies:
- *   post:
- *     summary: Register a new pharmacy
- *     tags: [Pharmacies]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/CreatePharmacyRequest'
- *     responses:
- *       201:
- *         description: Pharmacy registered successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   $ref: '#/components/schemas/Pharmacy'
- *       400:
- *         description: Validation error
- *       409:
- *         description: Pharmacy with license already exists
- */
-router.post(
-  '/',
-  authenticate,
-  authorize(UserRole.PHARMACY_STAFF, UserRole.SYSTEM_ADMIN),
-  validate(createPharmacySchema),
-  PharmacyController.createPharmacy
-);
+/* Public reads first (no auth) — avoids confusion with POST / and keeps browsing working when CORS targets this router only. */
 
 /**
  * @swagger
@@ -334,6 +295,47 @@ router.get(
   '/nearby',
   validate(nearbyPharmaciesQuerySchema),
   PharmacyController.getNearbyPharmacies
+);
+
+/**
+ * @swagger
+ * /pharmacies:
+ *   post:
+ *     summary: Register a new pharmacy
+ *     tags: [Pharmacies]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreatePharmacyRequest'
+ *     responses:
+ *       201:
+ *         description: Pharmacy registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/Pharmacy'
+ *       400:
+ *         description: Validation error
+ *       409:
+ *         description: Pharmacy with license already exists
+ */
+router.post(
+  '/',
+  authenticate,
+  authorize(UserRole.PHARMACY_STAFF, UserRole.SYSTEM_ADMIN),
+  validate(createPharmacySchema),
+  PharmacyController.createPharmacy
 );
 
 /**

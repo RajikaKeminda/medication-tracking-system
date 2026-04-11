@@ -15,12 +15,38 @@ import routes from './routes';
 
 const app = express();
 
-// Security
-app.use(helmet());
-app.use(cors({
-  origin: env.CORS_ORIGIN,
-  credentials: true,
-}));
+const corsOrigins = env.CORS_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean);
+
+/**
+ * Helmet defaults include Cross-Origin-Resource-Policy: same-origin, which makes browsers
+ * block reading API responses when the SPA origin differs (different host or port), e.g.
+ * localhost:3000 → 127.0.0.1:5000. That surfaces as failed fetches / generic "Forbidden".
+ * A JSON API consumed by a separate frontend needs CORP cross-origin (and no strict COEP).
+ */
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginEmbedderPolicy: false,
+  })
+);
+
+app.use(
+  cors({
+    credentials: true,
+    origin(origin, callback) {
+      if (!origin) {
+        return callback(null, true);
+      }
+      if (corsOrigins.length === 0) {
+        return callback(null, true);
+      }
+      if (corsOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      callback(null, false);
+    },
+  })
+);
 
 // Rate limiting
 const limiter = rateLimit({

@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import moment from 'moment'
 import { ApiClientError } from '../api/client'
 import * as inventoryApi from '../api/inventory'
 import { listPharmacies } from '../api/pharmacies'
-import { CATEGORIES, FORMS } from '../utils/inventoryUi'
+import { CATEGORIES, FORMS, expiryDateInputToIso } from '../utils/inventoryUi'
 
 const cardClass =
   'rounded-2xl border border-slate-200/90 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80'
@@ -206,7 +205,7 @@ export function InventoryFormPage() {
       if (!body.form) delete body.form
       if (!body.batchNumber) delete body.batchNumber
       if (!body.expiryDate) delete body.expiryDate
-      else body.expiryDate = moment(body.expiryDate, 'YYYY-MM-DD').toISOString()
+      else body.expiryDate = expiryDateInputToIso(body.expiryDate)
       if (!body.manufacturer) delete body.manufacturer
       if (!body.storageConditions) delete body.storageConditions
       if (!body.sideEffects?.length) delete body.sideEffects

@@ -11,7 +11,19 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(1, 'JWT refresh secret is required'),
   JWT_ACCESS_EXPIRATION: z.string().default('15m'),
   JWT_REFRESH_EXPIRATION: z.string().default('7d'),
-  CORS_ORIGIN: z.string().default('http://localhost:3000'),
+  CORS_ORIGIN: z
+    .string()
+    .default(
+      [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        'http://localhost:4173',
+        'http://127.0.0.1:4173',
+      ].join(',')
+    )
+    .describe('Comma-separated allowed browser origins (credentials enabled)'),
   RATE_LIMIT_WINDOW_MS: z.string().default('900000'),
   RATE_LIMIT_MAX: z.string().default('100'),
   STRIPE_SECRET_KEY: z.string().default('sk_test_mock_key'),
