@@ -857,12 +857,12 @@ describe('OrderService.generateInvoice', () => {
     await createTestOrder();
   });
 
-  it('should generate an invoice URL for an order', async () => {
-    const order = await OrderService.generateInvoice(testIds.orderId.toString());
+  it('should generate a PDF buffer and invoice URL for an order', async () => {
+    const result = await OrderService.generateInvoice(testIds.orderId.toString());
 
-    expect(order.invoiceUrl).toBeDefined();
-    expect(order.invoiceUrl).toContain('ORD-2026-000001');
-    expect(order.invoiceUrl).toMatch(/\.pdf$/);
+    expect(result.buffer).toBeInstanceOf(Buffer);
+    expect(result.buffer.length).toBeGreaterThan(0);
+    expect(result.orderNumber).toContain('ORD-2026-000001');
   });
 
   it('should throw NOT_FOUND for non-existent order', async () => {

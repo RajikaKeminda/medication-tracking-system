@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import PDFDocument from 'pdfkit';
 import { Order, IOrder, OrderStatus, PaymentStatus, PaymentMethod } from '../models/order.model';
 import { MedicationRequest, RequestStatus } from '../models/request.model';
 import { Inventory } from '../models/inventory.model';
@@ -456,19 +457,171 @@ export class OrderService {
     return { order, trackingUpdates: order.trackingUpdates };
   }
 
-  static async generateInvoice(orderId: string): Promise<IOrder> {
+  static async generateInvoice(orderId: string): Promise<{ buffer: Buffer; orderNumber: string }> {
     const order = await Order.findById(orderId)
-      .populate('userId', 'name email phone address')
-      .populate('pharmacyId', 'name location contactInfo');
+      .populate<{ userId: { name: string; email: string; phone?: string } }>('userId', 'name email phone')
+      .populate<{ pharmacyId: { name: string; contactInfo?: { email?: string; phone?: string } } }>('pharmacyId', 'name contactInfo');
 
     if (!order) {
       throw ApiError.notFound('Order not found');
     }
 
+    const buffer = await new Promise<Buffer>((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 50, size: 'A4' });
+      const chunks: Buffer[] = [];
+
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      const W = doc.page.width - 100; // usable width
+      const grey = '#6b7280';
+      const dark = '#111827';
+      const emerald = '#059669';
+
+      // ── Header bar ──────────────────────────────────────────
+      doc.rect(50, 45, W, 70).fill(emerald);
+
+      doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(26)
+        .text('INVOICE', 65, 65);
+
+      const pharmacyName =
+        typeof order.pharmacyId === 'object' && order.pharmacyId?.name
+          ? order.pharmacyId.name
+          : 'MediTrack Pharmacy';
+
+      doc.fontSize(10).font('Helvetica')
+        .text(pharmacyName, 65, 97, { align: 'right', width: W - 15 });
+
+      doc.fillColor(dark);
+
+      // ── Invoice meta ─────────────────────────────────────────
+      const metaY = 135;
+      const col2 = 50 + W / 2 + 10;
+
+      doc.font('Helvetica-Bold').fontSize(9).fillColor(grey)
+        .text('INVOICE NUMBER', 50, metaY)
+        .text('ORDER NUMBER',   col2, metaY);
+
+      doc.font('Helvetica').fontSize(10).fillColor(dark)
+        .text(order.orderNumber, 50, metaY + 13)
+        .text(order.orderNumber, col2, metaY + 13);
+
+      doc.font('Helvetica-Bold').fontSize(9).fillColor(grey)
+        .text('DATE ISSUED',    50, metaY + 35)
+        .text('PAYMENT STATUS', col2, metaY + 35);
+
+      const issued = new Date(order.createdAt).toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric',
+      });
+
+      doc.font('Helvetica').fontSize(10).fillColor(dark)
+        .text(issued, 50, metaY + 48)
+        .text(order.paymentStatus.toUpperCase(), col2, metaY + 48);
+
+      // ── Divider ───────────────────────────────────────────────
+      const divY = metaY + 75;
+      doc.moveTo(50, divY).lineTo(50 + W, divY).strokeColor('#e5e7eb').stroke();
+
+      // ── Bill To / From ────────────────────────────────────────
+      const billY = divY + 15;
+      const customer = typeof order.userId === 'object' ? order.userId : null;
+
+      doc.font('Helvetica-Bold').fontSize(9).fillColor(grey)
+        .text('BILL TO', 50, billY)
+        .text('FROM',    col2, billY);
+
+      doc.font('Helvetica-Bold').fontSize(11).fillColor(dark)
+        .text(customer?.name ?? '—', 50, billY + 14)
+        .text(pharmacyName,          col2, billY + 14);
+
+      doc.font('Helvetica').fontSize(9).fillColor(grey);
+      if (customer?.email) doc.text(customer.email, 50, billY + 28);
+      if (customer?.phone) doc.text(customer.phone, 50, billY + 40);
+
+      const addr = order.deliveryAddress;
+      if (addr) {
+        doc.text(`${addr.street}`, 50, billY + 52)
+           .text(`${addr.city} ${addr.postalCode}`, 50, billY + 64);
+      }
+
+      // ── Line items table ──────────────────────────────────────
+      const tableY = billY + 100;
+      const colWidths = { item: W * 0.45, qty: W * 0.12, unit: W * 0.2, total: W * 0.23 };
+      const col = {
+        item:  50,
+        qty:   50 + colWidths.item,
+        unit:  50 + colWidths.item + colWidths.qty,
+        total: 50 + colWidths.item + colWidths.qty + colWidths.unit,
+      };
+
+      // Table header
+      doc.rect(50, tableY, W, 22).fill('#f3f4f6');
+      doc.font('Helvetica-Bold').fontSize(9).fillColor(grey);
+      doc.text('ITEM',       col.item  + 4, tableY + 7)
+         .text('QTY',        col.qty   + 4, tableY + 7)
+         .text('UNIT PRICE', col.unit  + 4, tableY + 7)
+         .text('TOTAL',      col.total + 4, tableY + 7);
+
+      let rowY = tableY + 22;
+      const rowH = 22;
+
+      for (const [i, item] of (order.items ?? []).entries()) {
+        if (i % 2 === 1) {
+          doc.rect(50, rowY, W, rowH).fill('#f9fafb');
+        }
+        doc.font('Helvetica').fontSize(9).fillColor(dark);
+        doc.text(item.name,                                    col.item  + 4, rowY + 7, { width: colWidths.item - 8, ellipsis: true })
+           .text(String(item.quantity),                        col.qty   + 4, rowY + 7)
+           .text(`$${item.unitPrice.toFixed(2)}`,              col.unit  + 4, rowY + 7)
+           .text(`$${item.totalPrice.toFixed(2)}`,             col.total + 4, rowY + 7);
+        rowY += rowH;
+      }
+
+      // ── Totals ────────────────────────────────────────────────
+      const totalsX = col.unit;
+      const totalsW = W - (col.unit - 50);
+      let totY = rowY + 15;
+
+      doc.moveTo(50, rowY + 5).lineTo(50 + W, rowY + 5).strokeColor('#e5e7eb').stroke();
+
+      const totRow = (label: string, value: string, bold = false) => {
+        doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(9)
+           .fillColor(bold ? dark : grey)
+           .text(label, totalsX, totY)
+           .text(value,  col.total + 4, totY);
+        totY += 16;
+      };
+
+      totRow('Subtotal',     `$${order.subtotal.toFixed(2)}`);
+      totRow('Delivery fee', `$${order.deliveryFee.toFixed(2)}`);
+      totRow('Tax',          `$${order.tax.toFixed(2)}`);
+
+      doc.moveTo(totalsX, totY - 2).lineTo(50 + W, totY - 2).strokeColor('#e5e7eb').stroke();
+      totY += 4;
+      totRow('TOTAL',        `$${order.totalAmount.toFixed(2)}`, true);
+
+      // ── Payment method ────────────────────────────────────────
+      if (order.paymentMethod) {
+        totY += 8;
+        doc.font('Helvetica').fontSize(8).fillColor(grey)
+           .text(`Paid via ${order.paymentMethod}`, totalsX, totY);
+      }
+
+      // ── Footer ────────────────────────────────────────────────
+      const footY = doc.page.height - 60;
+      doc.moveTo(50, footY).lineTo(50 + W, footY).strokeColor('#e5e7eb').stroke();
+      doc.font('Helvetica').fontSize(8).fillColor(grey)
+         .text('Thank you for using MediTrack. For support, contact your pharmacy.', 50, footY + 10, { align: 'center', width: W });
+
+      doc.end();
+    });
+
+    // Persist the reference
     order.invoiceUrl = `/invoices/${order.orderNumber}.pdf`;
     await order.save();
 
-    return order;
+    return { buffer, orderNumber: order.orderNumber };
   }
 
   /**

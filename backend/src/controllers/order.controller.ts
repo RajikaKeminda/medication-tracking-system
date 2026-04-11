@@ -145,8 +145,11 @@ export class OrderController {
 
   static async generateInvoice(req: Request, res: Response, next: NextFunction) {
     try {
-      const order = await OrderService.generateInvoice(String(req.params.id));
-      ApiResponse.success(res, order, 'Invoice generated successfully');
+      const { buffer, orderNumber } = await OrderService.generateInvoice(String(req.params.id));
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="invoice-${orderNumber}.pdf"`);
+      res.setHeader('Content-Length', buffer.length);
+      res.send(buffer);
     } catch (error) {
       next(error);
     }

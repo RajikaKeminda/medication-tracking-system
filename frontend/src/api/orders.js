@@ -59,9 +59,29 @@ export async function processPayment(id, body) {
   return res.data
 }
 
-export async function generateInvoice(id) {
-  const res = await apiRequest(`/orders/${id}/invoice`, { method: 'POST' })
-  return res.data
+export async function downloadInvoice(id, orderNumber) {
+  const API_BASE = import.meta.env.VITE_API_URL ?? '/api'
+  const access = localStorage.getItem('accessToken')
+
+  const res = await fetch(`${API_BASE}/orders/${id}/invoice`, {
+    method: 'GET',
+    headers: { ...(access ? { Authorization: `Bearer ${access}` } : {}) },
+  })
+
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}))
+    throw new Error(json?.error?.message || `Invoice download failed (${res.status})`)
+  }
+
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `invoice-${orderNumber}.pdf`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }
 
 export async function assignDeliveryPartner(id, body) {

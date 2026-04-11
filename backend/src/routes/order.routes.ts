@@ -550,8 +550,8 @@ router.post(
 /**
  * @swagger
  * /orders/{id}/invoice:
- *   post:
- *     summary: Generate order invoice
+ *   get:
+ *     summary: Generate and download order invoice as PDF
  *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
@@ -567,7 +567,7 @@ router.post(
  *       404:
  *         description: Order not found
  */
-router.post(
+router.get(
   '/:id/invoice',
   authenticate,
   validate(orderIdParamSchema),

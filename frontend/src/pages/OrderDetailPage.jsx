@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import { ApiClientError } from '../api/client'
 import * as ordersApi from '../api/orders'
+import { downloadInvoice } from '../api/orders'
 import * as partnersApi from '../api/deliveryPartners'
 import { ROLES, userId } from '../constants/roles'
 import {
@@ -215,11 +216,10 @@ export function OrderDetailPage() {
     setBusy(true)
     setActionMsg('')
     try {
-      const o = await ordersApi.generateInvoice(id)
-      setOrder(o)
-      setActionMsg(o.invoiceUrl ? `Invoice: ${o.invoiceUrl}` : 'Invoice generated.')
+      await downloadInvoice(id, order.orderNumber)
+      setActionMsg('Invoice downloaded.')
     } catch (err) {
-      setActionMsg(err instanceof ApiClientError ? err.message : 'Invoice failed')
+      setActionMsg(err instanceof ApiClientError ? err.message : err?.message ?? 'Invoice download failed.')
     } finally {
       setBusy(false)
     }
@@ -573,10 +573,18 @@ export function OrderDetailPage() {
         <div className={`mt-6 ${cardClass}`}>
           <h2 className="text-base font-semibold text-slate-900 dark:text-white">Invoice</h2>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            {order.invoiceUrl || 'No invoice generated yet.'}
+            Download a PDF invoice for this order.
           </p>
-          <button type="button" className={`mt-3 ${btnSecondary}`} onClick={handleInvoice} disabled={busy}>
-            Generate invoice
+          <button
+            type="button"
+            onClick={handleInvoice}
+            disabled={busy}
+            className="mt-3 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-500 disabled:opacity-50"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
+            </svg>
+            {busy ? 'Generating…' : 'Download Invoice PDF'}
           </button>
         </div>
       ) : null}
