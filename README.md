@@ -70,6 +70,8 @@ The Order Processing module (`/api/orders`) manages the full lifecycle of medica
 
 ## Tech Stack
 
+### Backend
+
 | Component       | Technology                        |
 | --------------- | --------------------------------- |
 | Runtime         | Node.js + TypeScript              |
@@ -80,6 +82,18 @@ The Order Processing module (`/api/orders`) manages the full lifecycle of medica
 | Payment Gateway | Stripe                            |
 | Testing         | Jest, Supertest, MongoDB Memory Server, Artillery |
 | API Docs        | Swagger (swagger-jsdoc)           |
+
+### Frontend
+
+| Component       | Technology                        |
+| --------------- | --------------------------------- |
+| Framework       | React 19                          |
+| Build Tool      | Vite 8                            |
+| Styling         | Tailwind CSS 4                    |
+| Routing         | React Router DOM v7               |
+| Icons           | react-icons                       |
+| Date Handling   | moment.js                         |
+| Deployment      | Vercel                            |
 
 ---
 
@@ -152,9 +166,65 @@ npm start
 - Swagger API documentation: `http://localhost:5000/api-docs/`
 - Health check: `GET http://localhost:5000/api/health` (if applicable)
 
-### Step 4: Frontend Setup (if applicable)
+### Step 4: Frontend Setup
 
-> **Placeholder:** Add frontend setup instructions here when the frontend application is available. Include steps for installing dependencies, configuring environment variables, and running the development server.
+1. Navigate to the frontend directory:
+
+```bash
+cd ../frontend
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Create a `.env` file in the `frontend` directory and configure the API URL:
+
+```bash
+cp .env.example .env   # or create .env manually
+```
+
+```env
+VITE_API_URL=http://localhost:5000/api
+```
+
+| Variable | Description | Example |
+| -------- | ----------- | ------- |
+| `VITE_API_URL` | Base URL of the backend API | `http://localhost:5000/api` |
+
+4. Start the development server:
+
+```bash
+npm run dev
+```
+
+5. The frontend will be available at `http://localhost:5173` (Vite default).
+
+### Step 5: Verify Frontend
+
+The application provides the following pages:
+
+| Route | Page | Auth Required |
+| ----- | ---- | ------------- |
+| `/` | Home / landing page | No |
+| `/login` | Login | No |
+| `/signup` | Register | No |
+| `/pharmacies` | Browse pharmacies | No |
+| `/pharmacies/:id` | Pharmacy detail & reviews | No |
+| `/pharmacies/new` | Register a pharmacy | Yes |
+| `/pharmacies/:id/edit` | Edit pharmacy | Yes |
+| `/requests` | Medication requests list | Yes |
+| `/requests/new` | Create medication request | Yes |
+| `/requests/:id` | Request detail & status | Yes |
+| `/orders` | Orders list | Yes |
+| `/orders/new` | Create order | Yes |
+| `/orders/:id` | Order detail & tracking | Yes |
+| `/inventory` | Inventory list | Yes |
+| `/inventory/new` | Add inventory item | Yes |
+| `/inventory/:id` | Inventory item detail | Yes |
+| `/inventory/:id/edit` | Edit inventory item | Yes |
 
 ---
 
@@ -2872,9 +2942,34 @@ The backend API is deployed on [Render](https://render.com).
 
 ---
 
-### Frontend Deployment Platform
+### Frontend Deployment Platform: Vercel
 
-> **Placeholder:** Add frontend deployment platform and setup steps here when the frontend is deployed (e.g., Vercel, Netlify, or other hosting).
+The frontend is deployed on [Vercel](https://vercel.com).
+
+#### Frontend Setup Steps on Vercel
+
+1. **Import the Repository**
+   - Log in to the [Vercel Dashboard](https://vercel.com/dashboard)
+   - Click **Add New** → **Project**
+   - Import the GitHub repository
+
+2. **Configure Build Settings**
+   - **Root Directory:** `frontend`
+   - **Framework Preset:** Vite
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `dist`
+
+3. **Set Environment Variables**
+   - Go to **Settings** → **Environment Variables** in the Vercel project
+   - Add the following variable:
+
+| Variable | Value |
+| -------- | ----- |
+| `VITE_API_URL` | `https://medication-tracking-system.onrender.com/api` |
+
+4. **Deploy**
+   - Vercel automatically deploys on every push to the connected branch
+   - Monitor build logs in the Vercel dashboard
 
 ---
 
@@ -2906,7 +3001,7 @@ The following environment variables are used by the backend. Values are configur
 | ------- | --- |
 | **Deployed Backend API** | https://medication-tracking-system.onrender.com/api |
 | **API Documentation (Swagger)** | https://medication-tracking-system.onrender.com/api-docs/ |
-| **Deployed Frontend Application** | *(Placeholder: Add frontend URL when deployed)* |
+| **Deployed Frontend Application** | https://medication-tracking-system.vercel.app/ |
 
 ---
 
