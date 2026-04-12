@@ -5,6 +5,7 @@ import requestRoutes from './request.routes';
 import pharmacyRoutes from './pharmacy.routes';
 import inventoryRoutes from './inventory.routes';
 import deliveryPartnerRoutes from './delivery-partner.routes';
+import reportRoutes from './report.routes';
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use('/requests', requestRoutes);
 router.use('/pharmacies', pharmacyRoutes);
 router.use('/inventory', inventoryRoutes);
 router.use('/delivery-partners', deliveryPartnerRoutes);
+router.use('/reports', reportRoutes);
 
 export default router;

@@ -16,6 +16,7 @@ import { MedicationRequestDetailPage } from './pages/MedicationRequestDetailPage
 import { PharmaciesPage } from './pages/PharmaciesPage'
 import { PharmacyDetailPage } from './pages/PharmacyDetailPage'
 import { PharmacyFormPage } from './pages/PharmacyFormPage'
+import { ReportsPage } from './pages/ReportsPage'
 
 export default function App() {
   return (
@@ -125,6 +126,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <InventoryFormPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <ReportsPage />
             </ProtectedRoute>
           }
         />

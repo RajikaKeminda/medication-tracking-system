@@ -21,6 +21,10 @@ export function Layout() {
     isAuthenticated &&
     (user?.role === ROLES.PHARMACY_STAFF || user?.role === ROLES.SYSTEM_ADMIN)
 
+  const showReports =
+    isAuthenticated &&
+    (user?.role === ROLES.PHARMACY_STAFF || user?.role === ROLES.SYSTEM_ADMIN)
+
   return (
     <div className="flex min-h-svh flex-col bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/85 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-950/85">
@@ -69,6 +73,14 @@ export function Layout() {
                 className={({ isActive }) => (isActive ? navActive : navInactive)}
               >
                 Requests
+              </NavLink>
+            ) : null}
+            {showReports ? (
+              <NavLink
+                to="/reports"
+                className={({ isActive }) => (isActive ? navActive : navInactive)}
+              >
+                Reports
               </NavLink>
             ) : null}
             {!isAuthenticated ? (
