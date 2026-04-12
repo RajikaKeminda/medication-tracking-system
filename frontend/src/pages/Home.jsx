@@ -17,11 +17,7 @@ function CheckIcon(props) {
 export function Home() {
   const { user, isAuthenticated } = useAuth()
 
-  const features = [
-    'Secure JWT sign-in with refresh token rotation',
-    'Roles for patients, pharmacy staff, delivery, and admins',
-    'Built for your medication tracker REST API',
-  ]
+  const features = []
 
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden">
