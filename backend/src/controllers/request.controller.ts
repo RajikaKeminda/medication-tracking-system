@@ -108,9 +108,16 @@ export class RequestController {
             const request = await RequestService.getRequestById(requestId);
             const currentUser = req.user!;
 
+            // `userId` may be populated (a User doc) or a raw ObjectId; normalise to its _id string.
+            const ownerIdRaw = request.userId as unknown;
+            const ownerId =
+                ownerIdRaw && typeof ownerIdRaw === 'object' && '_id' in ownerIdRaw
+                    ? String((ownerIdRaw as { _id: unknown })._id)
+                    : String(ownerIdRaw);
+
             if (
                 currentUser.role === UserRole.PATIENT &&
-                String(request.userId) !== String(currentUser._id)
+                ownerId !== String(currentUser._id)
             ) {
                 return next(ApiError.forbidden('Access denied'));
             }
