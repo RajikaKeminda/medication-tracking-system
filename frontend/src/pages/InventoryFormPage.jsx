@@ -120,8 +120,11 @@ export function InventoryFormPage() {
       try {
         const data = await listPharmacies({ limit: 200 })
         if (!cancelled) {
-          /* data may be an array or { pharmacies: [...] } depending on API shape */
-          setPharmacies(Array.isArray(data) ? data : data.pharmacies ?? [])
+          /* API returns { items, total, page, pages }; tolerate other shapes too */
+          const list = Array.isArray(data)
+            ? data
+            : data?.items ?? data?.pharmacies ?? []
+          setPharmacies(list)
         }
       } catch {
         /* silently fail – user can still type manually if needed */
@@ -285,11 +288,14 @@ export function InventoryFormPage() {
                   <option value="">
                     {pharmaciesLoading ? 'Loading pharmacies…' : '— Select a Pharmacy —'}
                   </option>
-                  {pharmacies.map((p) => (
-                    <option key={p._id} value={p._id}>
-                      {p.name}{p.location ? ` — ${p.location}` : ''}
-                    </option>
-                  ))}
+                  {pharmacies.map((p) => {
+                    const city = typeof p.location === 'string' ? p.location : p.location?.city
+                    return (
+                      <option key={p._id} value={p._id}>
+                        {p.name}{city ? ` — ${city}` : ''}
+                      </option>
+                    )
+                  })}
                 </select>
                 {fieldErrors.pharmacyId && (
                   <p className="mt-1 text-xs text-red-600">{fieldErrors.pharmacyId}</p>
