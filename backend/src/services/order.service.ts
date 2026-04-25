@@ -62,6 +62,9 @@ export class OrderService {
     const session = await mongoose.startSession();
     session.startTransaction();
 
+    let createdOrderId: mongoose.Types.ObjectId;
+    let createdOrderNumber: string;
+
     try {
       const request = await MedicationRequest.findById(data.requestId).session(session);
       if (!request) {
@@ -141,18 +144,31 @@ export class OrderService {
       await request.save({ session });
 
       await session.commitTransaction();
+      createdOrderId = order._id as mongoose.Types.ObjectId;
+      createdOrderNumber = orderNumber;
       logger.info(`Order ${orderNumber} created successfully for user ${userId}`);
-
-      return order.populate([
-        { path: 'userId', select: 'name email phone' },
-        { path: 'pharmacyId', select: 'name location contactInfo' },
-      ]);
     } catch (error) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
+      // Only abort if the transaction is still active (commit may have already happened
+      // before a downstream failure).
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
       session.endSession();
+      throw error;
     }
+
+    session.endSession();
+
+    // Re-fetch with populate using a fresh query (no session attached) so we don't
+    // accidentally reuse the now-ended transaction session.
+    const populated = await Order.findById(createdOrderId)
+      .populate('userId', 'name email phone')
+      .populate('pharmacyId', 'name location contactInfo');
+
+    if (!populated) {
+      throw ApiError.notFound(`Order ${createdOrderNumber} could not be retrieved after creation`);
+    }
+    return populated;
   }
 
   static async getOrders(
